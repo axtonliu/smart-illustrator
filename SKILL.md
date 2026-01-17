@@ -10,8 +10,11 @@ description: 智能文章配图策划师。分析文章内容，识别最佳配�
 ## 使用方式
 
 ```bash
-# 分析文章并生成配图方案（含封面图）
+# 分析文章并自动生成配图（默认行为）
 /smart-illustrator path/to/article.md
+
+# 只输出 prompt，不自动生成图片
+/smart-illustrator path/to/article.md --prompt-only
 
 # 指定风格模式
 /smart-illustrator path/to/article.md --mode light   # 浅色清爽（默认）
@@ -27,6 +30,15 @@ description: 智能文章配图策划师。分析文章内容，识别最佳配�
 /smart-illustrator
 [粘贴文章内容]
 ```
+
+### 参数说明
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--prompt-only` | `false` | 只输出 prompt，不自动调用 API 生成图片 |
+| `--mode` | `light` | 风格模式：`light`（浅色清爽）或 `dark`（深色科技） |
+| `--no-cover` | `false` | 不生成封面图 |
+| `--count` | 自动 | 指定配图数量（默认根据文章长度自动判断） |
 
 ## 核心能力
 

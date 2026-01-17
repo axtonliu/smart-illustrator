@@ -57,8 +57,15 @@ cp -r smart-illustrator/references ~/.claude/skills/smart-illustrator/
 ### Basic Usage
 
 ```bash
-# Analyze article and generate illustrations (with cover)
+# Analyze article and auto-generate illustrations (default)
 /smart-illustrator path/to/article.md
+
+# Output prompts only, don't auto-generate images
+/smart-illustrator path/to/article.md --prompt-only
+
+# Specify style mode
+/smart-illustrator path/to/article.md --mode light   # Light style (default)
+/smart-illustrator path/to/article.md --mode dark    # Dark tech style
 
 # Without cover image
 /smart-illustrator path/to/article.md --no-cover
@@ -66,6 +73,15 @@ cp -r smart-illustrator/references ~/.claude/skills/smart-illustrator/
 # Specify number of illustrations
 /smart-illustrator path/to/article.md --count 5
 ```
+
+### Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--prompt-only` | `false` | Output prompts only, don't call API to generate images |
+| `--mode` | `light` | Style mode: `light` (clean) or `dark` (tech) |
+| `--no-cover` | `false` | Skip cover image generation |
+| `--count` | auto | Number of illustrations (auto-determined by article length) |
 
 ### Output Files
 
