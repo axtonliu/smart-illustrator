@@ -187,51 +187,80 @@ references/
 2. 同步更新 `style-light.md` 和 `style-dark.md` 中的 Prompt
 3. 完成！你的 Skill 就有了自己的品牌风格
 
-## 工作流程
+## 工作流程（自动执行）
+
+**重要**：以下所有步骤由 Claude 自动完成，用户无需手动执行任何命令。
 
 ### Step 1: 分析文章
 
 1. 读取文章内容
 2. 识别文章结构（章节、段落、要点）
-3. 标记潜在配图位置
-4. 确定每个位置的内容类型
+3. 标记潜在配图位置（通常 3-5 个）
+4. 为每个位置确定：
+   - 配图类型（process/architecture/sequence/concept/comparison 等）
+   - 渲染引擎（Mermaid 或 Gemini）
 
-### Step 2: 生成配图方案
+### Step 2: 生成图片（自动执行）
 
-为每个配图位置生成：
-- 位置标记（在哪个章节/段落之后）
-- 配图类型
-- 主题和目的
-- 视觉描述
-- 图上文字
+根据引擎类型，**直接调用命令**生成图片：
 
-### Step 3: 输出 Prompt
+#### Mermaid 类型（结构化图形）
 
-根据配图类型，结合 `references/style-light.md` 中的风格模板生成 Gemini Prompt。
-
-**Prompt 结构**：
-1. 风格指令（来自 `style-light.md`）
-2. 具体内容（类型、主题、元素、文字）
-3. 构图建议
-
-详见 `references/style-light.md` 中的完整模板。
-
-### Step 4: 生成图片并保存
-
-使用 Gemini API 生成图片，保存到文章同目录：
-
+1. 生成 Mermaid 代码，保存为临时 `.mmd` 文件
+2. **直接调用 Bash 执行**：
+```bash
+mmdc -i {文章目录}/{文章名}-diagram-01.mmd -o {文章目录}/{文章名}-image-01.png -t neutral -b white
 ```
-article.md
+3. 删除临时 `.mmd` 文件（可选保留）
+
+#### Gemini 类型（创意/视觉图形）
+
+1. 根据 `references/style-light.md` 生成 prompt
+2. **直接调用 Bash 执行**：
+```bash
+GEMINI_API_KEY=$GEMINI_API_KEY npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
+  --prompt "生成的 prompt 内容" \
+  --output {文章目录}/{文章名}-image-02.png
+```
+
+#### 封面图（Gemini，深色风格）
+
+1. 根据 `references/style-dark.md` 生成封面 prompt
+2. **直接调用 Bash 执行**：
+```bash
+GEMINI_API_KEY=$GEMINI_API_KEY npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
+  --prompt "封面 prompt 内容" \
+  --output {文章目录}/{文章名}-cover.png
+```
+
+### Step 3: 创建带配图的文章
+
+1. 复制原文内容
+2. 在 YAML frontmatter 中添加封面图引用
+3. 在各配图位置插入图片 Markdown 引用
+4. 保存为 `{文章名}-image.md`
+
+### Step 4: 输出确认
+
+完成后向用户报告：
+- 生成了几张图片（哪些用 Mermaid，哪些用 Gemini）
+- 输出文件列表
+- 任何错误或警告
+
+**输出文件清单**：
+```
+article.md                    # 原文（不修改）
 article-image.md              # 带配图的文章（核心输出）
-article-cover.png             # 封面图
-article-image-01.png          # 正文配图 1
-article-image-02.png          # 正文配图 2
-article-image-03.png          # 正文配图 3
+article-cover.png             # 封面图（Gemini，16:9）
+article-image-01.png          # 配图 1（可能是 Mermaid 或 Gemini）
+article-image-02.png          # 配图 2
+article-image-03.png          # 配图 3
 ```
 
 **命名约定**：
 - 封面图：`{文章名}-cover.png`
-- 正文配图：`{文章名}-image-01.png`
+- 正文配图：`{文章名}-image-01.png`（序号递增）
+- 临时 Mermaid 文件：`{文章名}-diagram-01.mmd`（可选保留）
 
 ---
 
@@ -338,113 +367,67 @@ ai-agent-image-03.png
 4. **风格一致**：同一篇文章的配图保持视觉统一
 5. **文字精简**：图上文字控制在 20 字以内
 
-## 图片生成后端
+## 前置要求（用户需确保）
 
-### 双引擎自动切换
+在使用此 Skill 前，用户需确保以下工具已安装：
 
-系统根据配图类型自动选择引擎：
+### 1. Mermaid CLI（用于结构化图形）
 
-| 引擎 | 适用类型 | 输出 |
-|------|---------|------|
-| **Mermaid** | process, architecture, sequence, mindmap, state | PNG（mmdc 导出） |
-| **Gemini** | concept, comparison, data, scene, metaphor, cover | PNG（API 生成） |
-
-### Mermaid 引擎
-
-结构化图形使用 Mermaid 渲染后导出 PNG。
-
-**前置要求**：
 ```bash
-# 安装 mermaid-cli
 npm install -g @mermaid-js/mermaid-cli
 ```
 
-**导出命令**：
+验证安装：`mmdc --version`
+
+### 2. Gemini API Key（用于创意/视觉图形）
+
+1. 获取 API Key: https://aistudio.google.com/apikey
+2. 设置环境变量: `export GEMINI_API_KEY=your_key`
+
+### 3. Bun 运行时（用于脚本执行）
+
 ```bash
-# 单张导出（浅色主题）
-mmdc -i diagram.mmd -o output.png -t neutral -b white
-
-# 单张导出（深色主题）
-mmdc -i diagram.mmd -o output.png -t dark -b transparent
-
-# 或使用项目脚本
-npx -y bun ~/.claude/skills/smart-illustrator/scripts/mermaid-export.ts \
-  --input diagram.mmd \
-  --output output.png \
-  --theme light
+curl -fsSL https://bun.sh/install | bash
 ```
 
-**Mermaid 主题配置**：
+---
+
+## 引擎配置参考
+
+Claude 在自动执行时会使用以下配置：
+
+### Mermaid 主题
 
 | 风格 | 主题参数 | 背景 |
 |------|---------|------|
 | 浅色清爽 | `-t neutral` | `-b white` |
 | 深色科技 | `-t dark` | `-b transparent` |
 
-### Gemini 引擎
-
-创意/视觉图形使用 Gemini API 生成。
-
-**前置要求**：
-1. 获取 API Key: https://aistudio.google.com/apikey
-2. 设置环境变量: `export GEMINI_API_KEY=your_key`
-
-**使用方式**：
-
-```bash
-# 单张生成
-npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
-  --prompt "A concept diagram..." \
-  --output image.png
-
-# 批量生成
-npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
-  --config illustrations.json \
-  --output-dir ./images
-```
+### Gemini 模型
 
 **模型**：`gemini-3-pro-image-preview`（2K 质量，$0.134/张 ≈ ¥1/张）
 
-### 自动模式
+---
 
-```bash
-# 自动选择引擎并生成所有配图
-/smart-illustrator article.md --auto
+## 执行示例
+
+用户只需输入：
+
+```
+/smart-illustrator path/to/article.md
 ```
 
-系统会：
-1. 分析文章内容
-2. 为每张配图选择合适的引擎
-3. Mermaid 类型 → 生成 .mmd 文件 → mmdc 导出 PNG
-4. Gemini 类型 → 生成 prompt → API 生成 PNG
-5. 统一插入到文章中
+Claude 会自动完成所有工作：
+1. 分析文章内容，识别配图位置
+2. 为每个位置选择最佳引擎（Mermaid 或 Gemini）
+3. 自动生成图片并保存到文章目录
+4. 创建带配图的 `article-image.md`
 
-**批量生成配置文件格式**：
+**用户无需手动执行任何命令。**
 
-```json
-{
-  "style": {
-    "mode": "light",
-    "background": "#F8F9FA",
-    "primary": "#2F2B42",
-    "accent": ["#F59E0B", "#38BDF8"]
-  },
-  "illustrations": [
-    {
-      "id": 1,
-      "prompt": "A concept diagram showing AI Agent with four capabilities...",
-      "filename": "01-ai-agent-concept.png"
-    },
-    {
-      "id": 2,
-      "prompt": "A comparison diagram, left side shows Prompt, right side shows Skills...",
-      "filename": "02-prompt-vs-skills.png"
-    }
-  ]
-}
-```
+---
 
-### 成本估算（Nano-Banana Pro / 2K）
+## 成本估算（Gemini API）
 
 | 用量 | 价格 | 人民币 |
 |------|------|--------|
