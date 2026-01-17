@@ -43,7 +43,85 @@ description: 智能文章配图策划师。分析文章内容，识别最佳配�
 | 章节转折点 | 中 - 提供视觉喘息 |
 | 情感/故事高潮 | 中 - 增强共鸣 |
 
-### 2. 风格与类型（重要区分）
+### 2. 双引擎系统（核心创新）
+
+根据配图内容自动选择最佳渲染引擎：
+
+```
+文章内容分析
+     │
+     ▼
+┌─────────────────────────────────────┐
+│        判断配图类型                   │
+└─────────────────────────────────────┘
+     │                    │
+     ▼                    ▼
+┌──────────────┐    ┌──────────────┐
+│   Mermaid    │    │    Gemini    │
+│  结构化图形   │    │  创意/视觉图  │
+└──────────────┘    └──────────────┘
+     │                    │
+     ▼                    ▼
+   mmdc 导出 PNG       API 生成 PNG
+     │                    │
+     └────────┬───────────┘
+              ▼
+        插入文章
+```
+
+#### Mermaid 引擎（结构化图形）
+
+适合有明确逻辑结构的内容，输出专业、精确、可编辑：
+
+| 图形类型 | Mermaid 语法 | 适用场景 |
+|---------|-------------|---------|
+| 流程图 | `flowchart` | 步骤、流程、决策分支 |
+| 时序图 | `sequenceDiagram` | 交互流程、API 调用 |
+| 架构图 | `block-beta` | 系统组件、层次结构 |
+| 思维导图 | `mindmap` | 发散结构、知识整理 |
+| 状态图 | `stateDiagram` | 状态转换、生命周期 |
+| 时间线 | `timeline` | 线性事件、历史演进 |
+| ER 图 | `erDiagram` | 数据关系、实体模型 |
+| 类图 | `classDiagram` | 代码结构、继承关系 |
+| 饼图 | `pie` | 比例分布、占比统计 |
+
+**触发关键词**：流程、步骤、阶段、节点、架构、组件、模块、系统、交互、调用、状态、转换、层级、结构、关系、依赖
+
+#### Gemini 引擎（创意/视觉图形）
+
+适合需要视觉表达、氛围渲染、创意隐喻的内容：
+
+| 图形类型 | 代号 | 适用场景 |
+|---------|------|---------|
+| 隐喻图 | `metaphor` | 类比、比喻、象征表达 |
+| 场景图 | `scene` | 故事、情境、叙事画面 |
+| 信息图 | `infographic` | 数据可视化 + 设计感 |
+| 概念图 | `concept` | 抽象概念的视觉化（非结构化） |
+| 封面图 | `cover` | 品牌风格、视觉吸引 |
+
+**触发关键词**：像...一样、比喻、类比、场景、情境、故事、画面、氛围、封面
+
+#### 引擎选择决策树
+
+```
+内容分析
+    │
+    ├─ 有明确的逻辑结构？（节点、箭头、层级）
+    │   └─ Yes → Mermaid
+    │
+    ├─ 需要视觉隐喻/创意表达？
+    │   └─ Yes → Gemini
+    │
+    ├─ 是技术文档？（API、架构、流程）
+    │   └─ Yes → Mermaid
+    │
+    ├─ 需要氛围/情感表达？
+    │   └─ Yes → Gemini
+    │
+    └─ 默认 → Gemini
+```
+
+### 3. 风格与类型
 
 **风格 (Style)** 和 **类型 (Type)** 是两个独立维度：
 
@@ -51,6 +129,7 @@ description: 智能文章配图策划师。分析文章内容，识别最佳配�
 |------|------|---------|
 | **风格** | 视觉外观：颜色、调性、氛围 | 调用时指定，**整篇文章统一** |
 | **类型** | 信息结构：如何组织内容 | 根据内容自动选择，每张图可不同 |
+| **引擎** | 渲染方式：Mermaid 或 Gemini | 根据类型自动选择 |
 
 #### 风格：2 种（调用时指定）
 
@@ -59,17 +138,21 @@ description: 智能文章配图策划师。分析文章内容，识别最佳配�
 | 浅色清爽 | `--mode light`（默认） | 文章配图、概念解释、日常内容 |
 | 深色科技 | `--mode dark` | 课程宣传、产品介绍、高冲击力场景 |
 
-#### 类型：7 种（根据内容自动选择）
+#### 类型与引擎对照表
 
-| 类型 | 代号 | 适用场景 | 构图特征 |
-|------|------|---------|---------|
-| 概念图 | `concept` | 抽象概念、思想、定义 | 中心辐射、隐喻画面 |
-| 流程图 | `process` | 步骤、流程、因果链 | 横向/纵向节点连接 |
-| 对比图 | `comparison` | A vs B、优劣、变化 | 左右/上下分栏 |
-| 数据图 | `data` | 数字、统计、趋势 | 图表化、数字突出 |
-| 场景图 | `scene` | 故事、情境、氛围 | 叙事性插画 |
-| 要点图 | `summary` | 关键点、总结、清单 | 结构化布局 |
-| 隐喻图 | `metaphor` | 类比、比喻、象征 | 创意视觉类比 |
+| 类型 | 代号 | 引擎 | 适用场景 | 构图特征 |
+|------|------|------|---------|---------|
+| 流程图 | `process` | **Mermaid** | 步骤、流程、因果链 | flowchart 语法 |
+| 架构图 | `architecture` | **Mermaid** | 系统组件、层次结构 | block-beta 语法 |
+| 时序图 | `sequence` | **Mermaid** | 交互流程、调用链 | sequenceDiagram 语法 |
+| 思维导图 | `mindmap` | **Mermaid** | 发散结构、知识整理 | mindmap 语法 |
+| 状态图 | `state` | **Mermaid** | 状态转换、生命周期 | stateDiagram 语法 |
+| 概念图 | `concept` | **Gemini** | 抽象概念、思想、定义 | 中心辐射、隐喻画面 |
+| 对比图 | `comparison` | **Gemini** | A vs B、优劣、变化 | 左右/上下分栏 |
+| 数据图 | `data` | **Gemini** | 数字、统计、趋势 | 信息图风格 |
+| 场景图 | `scene` | **Gemini** | 故事、情境、氛围 | 叙事性插画 |
+| 隐喻图 | `metaphor` | **Gemini** | 类比、比喻、象征 | 创意视觉类比 |
+| 封面图 | `cover` | **Gemini** | 文章封面 | 16:9 深色科技风格 |
 
 **关键原则**：同一篇文章的所有配图使用**统一风格**，但可以有**不同类型**。
 
@@ -257,18 +340,50 @@ ai-agent-image-03.png
 
 ## 图片生成后端
 
-### 模式一：prompt-only（默认）
+### 双引擎自动切换
 
-输出 prompt 文件，手动粘贴到 Gemini Web 生成。
+系统根据配图类型自动选择引擎：
 
+| 引擎 | 适用类型 | 输出 |
+|------|---------|------|
+| **Mermaid** | process, architecture, sequence, mindmap, state | PNG（mmdc 导出） |
+| **Gemini** | concept, comparison, data, scene, metaphor, cover | PNG（API 生成） |
+
+### Mermaid 引擎
+
+结构化图形使用 Mermaid 渲染后导出 PNG。
+
+**前置要求**：
 ```bash
-/smart-illustrator article.md
-# 输出 prompt.md，复制到 Gemini 生成
+# 安装 mermaid-cli
+npm install -g @mermaid-js/mermaid-cli
 ```
 
-### 模式二：gemini-api（自动生成）
+**导出命令**：
+```bash
+# 单张导出（浅色主题）
+mmdc -i diagram.mmd -o output.png -t neutral -b white
 
-使用 Gemini API 自动生成图片。
+# 单张导出（深色主题）
+mmdc -i diagram.mmd -o output.png -t dark -b transparent
+
+# 或使用项目脚本
+npx -y bun ~/.claude/skills/smart-illustrator/scripts/mermaid-export.ts \
+  --input diagram.mmd \
+  --output output.png \
+  --theme light
+```
+
+**Mermaid 主题配置**：
+
+| 风格 | 主题参数 | 背景 |
+|------|---------|------|
+| 浅色清爽 | `-t neutral` | `-b white` |
+| 深色科技 | `-t dark` | `-b transparent` |
+
+### Gemini 引擎
+
+创意/视觉图形使用 Gemini API 生成。
 
 **前置要求**：
 1. 获取 API Key: https://aistudio.google.com/apikey
@@ -277,10 +392,7 @@ ai-agent-image-03.png
 **使用方式**：
 
 ```bash
-# 自动生成模式
-/smart-illustrator article.md --auto
-
-# 或手动调用脚本
+# 单张生成
 npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
   --prompt "A concept diagram..." \
   --output image.png
@@ -291,7 +403,21 @@ npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
   --output-dir ./images
 ```
 
-**模型**：`gemini-3-pro-image-preview`（Nano-Banana Pro，2K 质量，$0.134/张 ≈ ¥1/张）
+**模型**：`gemini-3-pro-image-preview`（2K 质量，$0.134/张 ≈ ¥1/张）
+
+### 自动模式
+
+```bash
+# 自动选择引擎并生成所有配图
+/smart-illustrator article.md --auto
+```
+
+系统会：
+1. 分析文章内容
+2. 为每张配图选择合适的引擎
+3. Mermaid 类型 → 生成 .mmd 文件 → mmdc 导出 PNG
+4. Gemini 类型 → 生成 prompt → API 生成 PNG
+5. 统一插入到文章中
 
 **批量生成配置文件格式**：
 

@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg)](#status)
 
-Intelligent article illustration Skill for Claude Code: analyze content, identify optimal image positions, generate Gemini prompts, and create professional infographics automatically.
+Intelligent article illustration Skill for Claude Code with **dual-engine system**: automatically selects Mermaid (for structured diagrams) or Gemini (for creative visuals) based on content type.
 
 ## Status
 
@@ -16,12 +16,13 @@ Intelligent article illustration Skill for Claude Code: analyze content, identif
 
 ## Features
 
+- **Dual Engine System**: Auto-selects Mermaid or Gemini based on content type
 - **Smart Position Detection**: Analyzes article structure to identify optimal illustration points
-- **7 Illustration Types**: concept / process / comparison / data / scene / summary / metaphor
+- **10+ Illustration Types**: flowchart, sequence, mindmap, concept, comparison, scene, metaphor...
 - **Dual Style System**: Light (content) + Dark tech (cover)
 - **Cover Generation**: 16:9 landscape, no text, platform-ready
 - **Brand Customizable**: Modify `references/` to apply your brand style
-- **Gemini API Integration**: Auto-generate or copy prompts manually
+- **Multiple Backends**: Mermaid CLI for diagrams, Gemini API for creative visuals
 
 ## What Are Skills?
 
@@ -32,8 +33,9 @@ Skills are prompt-based extensions for [Claude Code](https://docs.anthropic.com/
 ### Prerequisites
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
-- [Bun](https://bun.sh/) runtime (for image generation scripts)
-- Gemini API Key (optional, for auto-generation)
+- [Bun](https://bun.sh/) runtime (for scripts)
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) (for diagram export): `npm install -g @mermaid-js/mermaid-cli`
+- Gemini API Key (optional, for creative visuals): https://aistudio.google.com/apikey
 
 ### Option A: Manual Installation (Recommended)
 
@@ -93,17 +95,30 @@ npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
   --output-dir ./images
 ```
 
+## Dual Engine System
+
+The skill automatically selects the best rendering engine based on content:
+
+| Engine | Best For | Output |
+|--------|----------|--------|
+| **Mermaid** | Structured diagrams (flowcharts, sequences, architectures) | Professional, precise, editable |
+| **Gemini** | Creative visuals (metaphors, scenes, infographics) | Artistic, atmospheric, branded |
+
 ## Illustration Types
 
-| Type | Best For | Composition |
-|------|----------|-------------|
-| `concept` | Abstract concepts, definitions | Center-radial |
-| `process` | Steps, workflows | Horizontal/vertical nodes |
-| `comparison` | A vs B, contrasts | Left-right split |
-| `data` | Numbers, statistics | Chart-style |
-| `scene` | Stories, scenarios | Narrative illustration |
-| `summary` | Key points, summaries | Card grid |
-| `metaphor` | Analogies, symbols | Creative visual |
+| Type | Engine | Best For | Syntax/Style |
+|------|--------|----------|--------------|
+| `process` | Mermaid | Steps, workflows | `flowchart` |
+| `architecture` | Mermaid | System components | `block-beta` |
+| `sequence` | Mermaid | API calls, interactions | `sequenceDiagram` |
+| `mindmap` | Mermaid | Knowledge structure | `mindmap` |
+| `state` | Mermaid | State transitions | `stateDiagram` |
+| `concept` | Gemini | Abstract concepts | Center-radial |
+| `comparison` | Gemini | A vs B, contrasts | Left-right split |
+| `data` | Gemini | Statistics, trends | Infographic style |
+| `scene` | Gemini | Stories, scenarios | Narrative illustration |
+| `metaphor` | Gemini | Analogies, symbols | Creative visual |
+| `cover` | Gemini | Article cover | 16:9 dark tech |
 
 ## Style System
 
@@ -130,8 +145,9 @@ smart-illustrator/
 ├── README.md
 ├── LICENSE
 ├── scripts/
-│   ├── generate-image.ts     # Single image generation
-│   └── batch-generate.ts     # Batch image generation
+│   ├── generate-image.ts     # Gemini single image generation
+│   ├── batch-generate.ts     # Gemini batch generation
+│   └── mermaid-export.ts     # Mermaid diagram to PNG export
 └── references/
     ├── brand-colors.md       # Brand palette (customizable)
     ├── style-light.md        # Light style Gemini prompt
@@ -187,6 +203,8 @@ Contributions welcome (low-maintenance project):
 This project builds upon these excellent tools:
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - Anthropic's AI coding assistant
+- [Mermaid](https://mermaid.js.org/) - Diagramming and charting tool
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Command line interface for Mermaid
 - [Gemini API](https://ai.google.dev/) - Google's image generation API
 - [Bun](https://bun.sh/) - Fast JavaScript runtime
 
