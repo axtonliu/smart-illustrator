@@ -102,7 +102,7 @@ Options:
   -p, --prompt <text>       Image description
   -f, --prompt-file <path>  Read prompt from file
   -o, --output <path>       Output image path (default: generated.png)
-  -m, --model <model>       Model to use (default: gemini-3-pro-image)
+  -m, --model <model>       Model to use (default: gemini-3-pro-image-preview)
   -h, --help                Show this help
 
 Environment:
