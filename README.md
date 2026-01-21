@@ -116,6 +116,66 @@ npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
   --output-dir ./images
 ```
 
+## PPT/Slides Generation Mode (Experimental)
+
+Beyond article illustrations, this skill can generate batch infographics for PPT/Keynote slides. This mode outputs a JSON prompt file for manual Gemini generation.
+
+### When to Use
+
+| Mode | Use Case | Output |
+|------|----------|--------|
+| **Article Mode** | Blog posts, newsletters | 3-5 illustrations inserted in article |
+| **Slides Mode** | Video B-roll, presentations | 8-15 standalone infographics |
+
+### JSON Format for Batch Generation
+
+The key to successful batch generation is using `picture_N` fields (not array with `id`):
+
+```json
+{
+  "task": "请按以下指令为我生成 9 张独立的信息图。",
+  "important": "不要合并在一起，每一张图片是一个单独的绘图任务。格式：16:9 横版。",
+  "style": "[Complete style prompt - see styles/style-light.md]",
+  "picture_1": {
+    "title": "封面：主题标题",
+    "content": "[Raw content for this section]"
+  },
+  "picture_2": {
+    "title": "第二张图标题",
+    "content": "[Raw content]"
+  }
+}
+```
+
+### Critical Rules
+
+1. **Use `picture_N` fields** - Not an array with `id`. Gemini interprets `picture_1`, `picture_2` as separate tasks.
+
+2. **Emphasize separation** - Must include: "不要合并在一起，每一张图片是一个单独的绘图任务"
+
+3. **Pass complete style** - Include the full style prompt from `styles/style-light.md`, don't summarize.
+
+4. **Content granularity** - Split by H2 headers, not every paragraph. ~9 images for a 12-minute video script.
+
+5. **Don't specify composition** - Only provide `title` + `content`. Let Gemini design the visual layout.
+
+### Example Workflow
+
+```bash
+# 1. Claude analyzes article and generates JSON prompt
+/smart-illustrator path/to/script.md --mode slides --output json
+
+# 2. Copy JSON to Gemini (gemini.google.com or AI Studio)
+# 3. Gemini generates images one by one
+# 4. Download images manually
+```
+
+> **Note:** Currently `--mode slides` is not yet implemented. Use this format manually with Gemini.
+
+See `references/slides-prompt-example.json` for a complete example.
+
+---
+
 ## Dual Engine System
 
 The skill automatically selects the best rendering engine based on content:
