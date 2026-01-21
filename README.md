@@ -137,11 +137,11 @@ The key to successful batch generation is using `picture_N` fields (not array wi
   "important": "不要合并在一起，每一张图片是一个单独的绘图任务。格式：16:9 横版。",
   "style": "[Complete style prompt - see styles/style-light.md]",
   "picture_1": {
-    "title": "封面：主题标题",
+    "topic": "厨房模型总览",
     "content": "[Raw content for this section]"
   },
   "picture_2": {
-    "title": "第二张图标题",
+    "topic": "Skills vs MCP",
     "content": "[Raw content]"
   }
 }
@@ -157,7 +157,7 @@ The key to successful batch generation is using `picture_N` fields (not array wi
 
 4. **Content granularity** - Split by H2 headers, not every paragraph. ~9 images for a 12-minute video script.
 
-5. **Don't specify composition** - Only provide `title` + `content`. Let Gemini design the visual layout.
+5. **Don't specify composition** - Only provide `topic` (theme direction) + `content`. Let Gemini design the visual layout and choose the title text.
 
 ### Example Workflow
 
