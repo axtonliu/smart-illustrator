@@ -19,9 +19,9 @@ Intelligent article illustration Skill for Claude Code with **dual-engine system
 - **Dual Engine System**: Auto-selects Mermaid or Gemini based on content type
 - **Smart Position Detection**: Analyzes article structure to identify optimal illustration points
 - **10+ Illustration Types**: flowchart, sequence, mindmap, concept, comparison, scene, metaphor...
-- **Dual Style System**: Light (content) + Dark tech (cover)
+- **Extensible Style System**: Light, Dark, Minimal, and custom styles
 - **Cover Generation**: 16:9 landscape, no text, platform-ready
-- **Brand Customizable**: Modify `references/` to apply your brand style
+- **Brand Customizable**: Modify `styles/` to apply your brand style
 - **Multiple Backends**: Mermaid CLI for diagrams, Gemini API for creative visuals
 
 ## What Are Skills?
@@ -49,7 +49,7 @@ git clone https://github.com/axtonliu/smart-illustrator.git ~/.claude/skills/sma
 ```bash
 # If you only want the skill without scripts
 cp -r smart-illustrator/SKILL.md ~/.claude/skills/smart-illustrator/
-cp -r smart-illustrator/references ~/.claude/skills/smart-illustrator/
+cp -r smart-illustrator/styles ~/.claude/skills/smart-illustrator/
 ```
 
 ## Usage
@@ -63,9 +63,13 @@ cp -r smart-illustrator/references ~/.claude/skills/smart-illustrator/
 # Output prompts only, don't auto-generate images
 /smart-illustrator path/to/article.md --prompt-only
 
-# Specify style mode
-/smart-illustrator path/to/article.md --mode light   # Light style (default)
-/smart-illustrator path/to/article.md --mode dark    # Dark tech style
+# Specify style (loads from styles/ directory)
+/smart-illustrator path/to/article.md --style light     # Light style (default)
+/smart-illustrator path/to/article.md --style dark      # Dark tech style
+/smart-illustrator path/to/article.md --style minimal   # Minimal style
+
+# List available styles
+/smart-illustrator --list-styles
 
 # Without cover image
 /smart-illustrator path/to/article.md --no-cover
@@ -79,7 +83,8 @@ cp -r smart-illustrator/references ~/.claude/skills/smart-illustrator/
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--prompt-only` | `false` | Output prompts only, don't call API to generate images |
-| `--mode` | `light` | Style mode: `light` (clean) or `dark` (tech) |
+| `--style` | `light` | Style name, loads `styles/style-{name}.md` |
+| `--list-styles` | - | List all available styles in `styles/` directory |
 | `--no-cover` | `false` | Skip cover image generation |
 | `--count` | auto | Number of illustrations (auto-determined by article length) |
 
@@ -138,12 +143,20 @@ The skill automatically selects the best rendering engine based on content:
 
 ## Style System
 
+### Built-in Styles
+
+| Style | File | Best For |
+|-------|------|----------|
+| Light | `styles/style-light.md` | Content illustrations (default) |
+| Dark | `styles/style-dark.md` | Cover images, marketing |
+| Minimal | `styles/style-minimal.md` | Technical docs, whitepapers |
+
 ### Content Illustrations: Light Style
 
 - 3:4 portrait format
 - Light gray background `#F8F9FA`
 - Flat geometric + thin lines
-- See `references/style-light.md`
+- See `styles/style-light.md`
 
 ### Cover Images: Dark Tech Style
 
@@ -151,7 +164,11 @@ The skill automatically selects the best rendering engine based on content:
 - Deep blue gradient background
 - Line icons + glassmorphism
 - No text
-- See `references/style-dark.md`
+- See `styles/style-dark.md`
+
+### Custom Styles
+
+Add your own style by creating `styles/style-{name}.md` and use it with `--style {name}`.
 
 ## File Structure
 
@@ -164,19 +181,32 @@ smart-illustrator/
 │   ├── generate-image.ts     # Gemini single image generation
 │   ├── batch-generate.ts     # Gemini batch generation
 │   └── mermaid-export.ts     # Mermaid diagram to PNG export
-└── references/
+└── styles/
     ├── brand-colors.md       # Brand palette (customizable)
-    ├── style-light.md        # Light style Gemini prompt
-    └── style-dark.md         # Dark style Gemini prompt
+    ├── style-light.md        # Light style Gemini prompt (default)
+    ├── style-dark.md         # Dark style Gemini prompt
+    └── style-minimal.md      # Minimal style Gemini prompt
 ```
 
 ## Customization
 
 Want to use your own brand style?
 
-### 1. Modify Brand Palette
+### Option 1: Modify Existing Styles
 
-Edit `references/brand-colors.md`:
+1. Edit `styles/brand-colors.md` with your colors
+2. Sync color values in `styles/style-*.md` files
+3. Done! Your Skill now has your own brand identity.
+
+### Option 2: Add New Styles
+
+1. Create `styles/style-{name}.md` (e.g., `style-corporate.md`)
+2. Follow the format in existing style files
+3. Use with `--style {name}`
+
+### Example: Custom Brand Palette
+
+Edit `styles/brand-colors.md`:
 
 ```markdown
 ## Core / 核心色
@@ -185,14 +215,6 @@ Edit `references/brand-colors.md`:
 ## Accent / 点缀色
 | Your Accent | `#XXXXXX` | Your accent color |
 ```
-
-### 2. Update Style Prompts
-
-Sync color values in `references/style-light.md` and `references/style-dark.md`.
-
-### 3. Done!
-
-Your Skill now has your own brand identity.
 
 ## Configuration Reference
 
@@ -242,9 +264,10 @@ This skill follows the style guidelines from [mermaid-visualizer](https://github
 
 | File | Purpose | Aspect |
 |------|---------|--------|
-| `references/style-light.md` | Content illustrations (default) | 3:4 portrait |
-| `references/style-dark.md` | Cover images | 16:9 landscape |
-| `references/brand-colors.md` | Color palette reference | - |
+| `styles/style-light.md` | Content illustrations (default) | 3:4 portrait |
+| `styles/style-dark.md` | Cover images | 16:9 landscape |
+| `styles/style-minimal.md` | Technical docs | 3:4 portrait |
+| `styles/brand-colors.md` | Color palette reference | - |
 
 ## Cost
 
