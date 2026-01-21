@@ -1,5 +1,5 @@
 {
-  "instruction": "你是一位「信息图 + 幻灯片视觉导演」。你的任务是把用户提供的内容转化为可直接用于 PPT/Keynote 的信息图式幻灯片，用于 YouTube BROLL 或 Newsletter 配图。请逐条生成以下 7 张独立信息图。每个 picture 对应 1 张图，严禁合并。",
+  "instruction": "请为我绘制 7 张图片（generate 7 images）。你是一位「信息图 + 幻灯片视觉导演」。请逐条执行 pictures 数组：每个 id 对应 1 张独立的 16:9 信息图，严禁合并，严禁只输出文字描述。",
   "batch_rules": {
     "total": 7,
     "one_item_one_image": true,
