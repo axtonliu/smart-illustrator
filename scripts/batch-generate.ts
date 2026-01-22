@@ -148,8 +148,10 @@ async function generateImage(
       }
     ],
     generationConfig: {
-      responseModalities: ['image', 'text'],
-      responseMimeType: 'image/png'
+      responseModalities: ['IMAGE', 'TEXT'],
+      imageConfig: {
+        imageSize: '2K'
+      }
     }
   };
 
