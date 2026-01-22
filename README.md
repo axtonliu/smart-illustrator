@@ -82,11 +82,22 @@ cp -r smart-illustrator/styles ~/.claude/skills/smart-illustrator/
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `--mode` | `article` | Mode: `article` (illustrations), `slides` (PPT infographics), `match` (reuse images) |
+| `--images` | - | Image directory path (required for match mode) |
 | `--prompt-only` | `false` | Output prompts only, don't call API to generate images |
 | `--style` | `light` | Style name, loads `styles/style-{name}.md` |
 | `--list-styles` | - | List all available styles in `styles/` directory |
 | `--no-cover` | `false` | Skip cover image generation |
 | `--count` | auto | Number of illustrations (auto-determined by article length) |
+
+### Illustration Count Guidelines
+
+| Article Length | Suggested Count |
+|----------------|-----------------|
+| Short (< 1000 words) | 1-2 images |
+| Medium (1000-3000 words) | 2-4 images |
+| Long (> 3000 words) | 4-6 images |
+| Tutorials/Guides | 1 per major step |
 
 ### Output Files
 
@@ -99,22 +110,76 @@ article-image-02.png
 article-image-03.png
 ```
 
-### Manual Gemini API Usage
+### Manual Script Usage
+
+#### generate-image.ts (Single Image)
 
 ```bash
-# Set API Key
 export GEMINI_API_KEY=your_key
 
-# Single image
+# From prompt text
 npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
   --prompt "A concept diagram showing..." \
   --output image.png
 
-# Batch generation
-npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
-  --config illustrations.json \
-  --output-dir ./images
+# From prompt file
+npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
+  --prompt-file prompt.md \
+  --output image.png
 ```
+
+| Option | Description |
+|--------|-------------|
+| `-p, --prompt` | Image description text |
+| `-f, --prompt-file` | Read prompt from file |
+| `-o, --output` | Output path (default: generated.png) |
+| `-m, --model` | Model (default: gemini-3-pro-image-preview) |
+
+#### batch-generate.ts (Batch Generation)
+
+```bash
+export GEMINI_API_KEY=your_key
+
+npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
+  --config slides.json \
+  --output-dir ./images \
+  --prefix SKILL_01
+```
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config` | JSON config file (required) |
+| `-o, --output-dir` | Output directory (default: ./illustrations) |
+| `-m, --model` | Model (default: gemini-3-pro-image-preview) |
+| `-d, --delay` | Delay between requests in ms (default: 2000) |
+| `-p, --prefix` | Filename prefix (default: from config filename) |
+
+Output: `{prefix}-01.png`, `{prefix}-02.png`, etc.
+
+#### mermaid-export.ts (Mermaid to PNG)
+
+```bash
+# From .mmd file
+npx -y bun ~/.claude/skills/smart-illustrator/scripts/mermaid-export.ts \
+  --input diagram.mmd \
+  --output diagram.png
+
+# From inline content
+npx -y bun ~/.claude/skills/smart-illustrator/scripts/mermaid-export.ts \
+  --content "flowchart LR
+    A[Start] --> B[End]" \
+  --output simple.png \
+  --theme dark
+```
+
+| Option | Description |
+|--------|-------------|
+| `-i, --input` | Input .mmd file path |
+| `-c, --content` | Mermaid diagram content (alternative) |
+| `-o, --output` | Output path (default: output.png) |
+| `-t, --theme` | Theme: `light` (default) or `dark` |
+| `-w, --width` | Image width in pixels |
+| `-H, --height` | Image height in pixels |
 
 ## PPT/Slides Generation Mode
 
@@ -164,6 +229,24 @@ Use `pictures[]` array format with explicit batch rules:
 
 6. **Content granularity** - Judge by information density, not mechanically by H2 headers.
 
+### Cover Slide Branding (PPT Mode)
+
+For course/series content, the cover slide (`id: 1`) should include:
+
+```json
+{
+  "id": 1,
+  "topic": "封面",
+  "content": "Agent Skills 完全指南\n\n第4节：渐进式披露与 Description 优化\n\n学习目标：理解 Progressive Disclosure 机制"
+}
+```
+
+Structure:
+- **Series name**: e.g., "Agent Skills 完全指南"
+- **Section number**: e.g., "第4节"
+- **Section title**: e.g., "渐进式披露与 Description 优化"
+- **Learning objectives** (optional)
+
 ### Workflow Options
 
 **Option A: Gemini Web (Manual)**
@@ -209,6 +292,21 @@ Reuse existing PPT images for article illustrations without regenerating.
 
 ---
 
+## Smart Position Detection
+
+The skill analyzes article structure to identify optimal illustration points:
+
+| Signal | Illustration Value |
+|--------|-------------------|
+| Abstract concept first appears | High - helps build mental model |
+| Process/step description | High - visual is clearer than text |
+| Comparison/choice discussion | High - side-by-side is clear |
+| Data/statistics reference | Medium - numbers visualized have impact |
+| Section transition point | Medium - provides visual breathing room |
+| Emotional/story climax | Medium - enhances resonance |
+
+---
+
 ## Dual Engine System
 
 The skill automatically selects the best rendering engine based on content:
@@ -233,6 +331,18 @@ The skill automatically selects the best rendering engine based on content:
 | `scene` | Gemini | Stories, scenarios | Narrative illustration |
 | `metaphor` | Gemini | Analogies, symbols | Creative visual |
 | `cover` | Gemini | Article cover | 16:9 dark tech |
+
+### Type × Composition Reference
+
+| Type | Recommended Composition | Elements |
+|------|------------------------|----------|
+| concept | Center-radial, hierarchy | Core icon + surrounding factors |
+| process | Horizontal/vertical flow | Nodes + arrows + labels |
+| comparison | Left-right / top-bottom split | Two columns + corresponding items |
+| data | Chart-style | Numbers prominent + graphical |
+| scene | Narrative illustration | Characters + environment + action |
+| summary | Card grid, bullet points | Structured layout |
+| metaphor | Analogy visual | Creative visual metaphor |
 
 ## Style System
 
@@ -268,17 +378,20 @@ Add your own style by creating `styles/style-{name}.md` and use it with `--style
 ```
 smart-illustrator/
 ├── SKILL.md                  # Skill definition (Claude Code entry)
+├── CLAUDE.md                 # Project rules (style sync, JSON format)
 ├── README.md
 ├── LICENSE
 ├── scripts/
 │   ├── generate-image.ts     # Gemini single image generation
-│   ├── batch-generate.ts     # Gemini batch generation
+│   ├── batch-generate.ts     # Gemini batch generation (2K resolution)
 │   └── mermaid-export.ts     # Mermaid diagram to PNG export
-└── styles/
-    ├── brand-colors.md       # Brand palette (customizable)
-    ├── style-light.md        # Light style Gemini prompt (default)
-    ├── style-dark.md         # Dark style Gemini prompt
-    └── style-minimal.md      # Minimal style Gemini prompt
+├── styles/
+│   ├── brand-colors.md       # Brand palette (customizable)
+│   ├── style-light.md        # Light style Gemini prompt (default)
+│   ├── style-dark.md         # Dark style Gemini prompt
+│   └── style-minimal.md      # Minimal style Gemini prompt
+└── references/
+    └── slides-prompt-example.json  # PPT mode JSON format example
 ```
 
 ## Customization
