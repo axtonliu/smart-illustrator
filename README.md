@@ -116,9 +116,9 @@ npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
   --output-dir ./images
 ```
 
-## PPT/Slides Generation Mode (Experimental)
+## PPT/Slides Generation Mode
 
-Beyond article illustrations, this skill can generate batch infographics for PPT/Keynote slides. This mode outputs a JSON prompt file for manual Gemini generation.
+Beyond article illustrations, this skill can generate batch infographics for PPT/Keynote slides.
 
 ### When to Use
 
@@ -126,56 +126,86 @@ Beyond article illustrations, this skill can generate batch infographics for PPT
 |------|----------|--------|
 | **Article Mode** | Blog posts, newsletters | 3-5 illustrations inserted in article |
 | **Slides Mode** | Video B-roll, presentations | 8-15 standalone infographics |
+| **Match Mode** | Reuse existing images | Select best-fit images from a folder |
 
 ### JSON Format for Batch Generation
 
-The key to successful batch generation is using `picture_N` fields (not array with `id`):
+Use `pictures[]` array format with explicit batch rules:
 
 ```json
 {
-  "task": "请按以下指令为我生成 9 张独立的信息图。",
-  "important": "不要合并在一起，每一张图片是一个单独的绘图任务。格式：16:9 横版。",
-  "style": "[Complete style prompt - see styles/style-light.md]",
-  "picture_1": {
-    "topic": "厨房模型总览",
-    "content": "[Raw content for this section]"
+  "instruction": "请为我绘制 7 张图片（generate 7 images）。你是一位「信息图绘制者」。请逐条执行 pictures 数组：每个 id 对应 1 张独立的 16:9 信息图，严禁合并，严禁只输出文字描述。",
+  "batch_rules": {
+    "total": 7,
+    "one_item_one_image": true,
+    "aspect_ratio": "16:9",
+    "do_not_merge": true
   },
-  "picture_2": {
-    "topic": "Skills vs MCP",
-    "content": "[Raw content]"
-  }
+  "fallback": "如果无法一次生成全部图片：请输出 7 条独立的单图绘图指令...",
+  "style": "[Complete style prompt - see styles/style-light.md]",
+  "pictures": [
+    { "id": 1, "topic": "封面", "content": "Course Name\n\nSection Title\n\nLearning objectives..." },
+    { "id": 2, "topic": "核心概念", "content": "[Raw content]" }
+  ]
 }
 ```
 
 ### Critical Rules
 
-1. **Use `picture_N` fields** - Not an array with `id`. Gemini interprets `picture_1`, `picture_2` as separate tasks.
+1. **Use `pictures[]` array** - Array structure helps Gemini enter "loop execution" mode for batch generation.
 
-2. **Emphasize separation** - Must include: "不要合并在一起，每一张图片是一个单独的绘图任务"
+2. **Add image trigger phrase** - Must include "请为我绘制 N 张图片（generate N images）" to trigger image generation mode.
 
-3. **Pass complete style** - Include the full style prompt from `styles/style-light.md`, don't summarize.
+3. **Role as "绘制者" not "导演"** - Use "信息图绘制者" (illustrator) not "视觉导演" (director) to trigger actual drawing behavior.
 
-4. **Content granularity** - Judge by information density and importance, not mechanically by H2 headers:
-   - **Key insights / golden quotes**: Even if short, deserve a standalone slide (e.g., "没有银弹")
-   - **Parallel items**: Merge into one slide (e.g., "价值1、2、3" → one slide with 3 points)
-   - Goal: Each slide should have balanced information — not too much, not too little
+4. **Separate instruction from style** - `instruction` = what to do + role; `style` = visual rules only.
 
-5. **Don't specify composition** - Only provide `topic` (theme direction) + `content`. Let Gemini design the visual layout and choose the title text.
+5. **Pass complete style** - Include the full style prompt from `styles/style-light.md`, don't summarize.
 
-### Example Workflow
+6. **Content granularity** - Judge by information density, not mechanically by H2 headers.
 
+### Workflow Options
+
+**Option A: Gemini Web (Manual)**
 ```bash
-# 1. Claude analyzes article and generates JSON prompt
-/smart-illustrator path/to/script.md --mode slides --output json
+# 1. Generate JSON prompt
+/smart-illustrator path/to/script.md --mode slides
 
-# 2. Copy JSON to Gemini (gemini.google.com or AI Studio)
-# 3. Gemini generates images one by one
-# 4. Download images manually
+# 2. Copy JSON to Gemini (gemini.google.com)
+# 3. Gemini generates images
 ```
 
-> **Note:** Currently `--mode slides` is not yet implemented. Use this format manually with Gemini.
+**Option B: Gemini API (Automated)**
+```bash
+# Set API Key
+export GEMINI_API_KEY=your_key
+
+# Run batch generation (2K resolution, 2816x1536)
+npx -y bun ~/.claude/skills/smart-illustrator/scripts/batch-generate.ts \
+  --config slides.json \
+  --output-dir ./images
+```
 
 See `references/slides-prompt-example.json` for a complete example.
+
+## Match Mode (Image Reuse)
+
+Reuse existing PPT images for article illustrations without regenerating.
+
+```bash
+/smart-illustrator path/to/article.md --mode match --images path/to/images/
+```
+
+**How it works:**
+1. Reads article content and identifies illustration points
+2. Uses Claude's vision to understand each image's content
+3. Matches images to article sections by relevance
+4. Outputs `{article}-image.md` with image references
+
+**Rules:**
+- Not every image needs to be used
+- Not every section needs an image
+- Skip positions with no good match
 
 ---
 
@@ -309,7 +339,8 @@ This skill follows the style guidelines from [mermaid-visualizer](https://github
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Model | `gemini-3-pro-image-preview` | 2K quality, best for illustrations |
+| Model | `gemini-3-pro-image-preview` | Best for illustrations |
+| Resolution | 2K (2816×1536) | High-res output via `imageConfig.imageSize` |
 | Content Aspect | 3:4 portrait | Optimized for article embedding |
 | Cover Aspect | 16:9 landscape | Platform-ready cover format |
 | Cover Text | **None** | Clean visual, title shown by platform |
