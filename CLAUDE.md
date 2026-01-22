@@ -37,6 +37,32 @@ PPT/Slides 模式生成的 JSON 必须使用 `picture_1`、`picture_2`... 格式
 
 生成前必须读取 `references/slides-prompt-example.json` 作为格式参考。
 
-## 文件同步
+## 双目录同步规则（强制）
 
-修改后记得同步到 `~/.claude/skills/smart-illustrator/` 目录。
+本项目存在两个目录，**必须始终保持完全同步**：
+
+| 目录 | 用途 |
+|------|------|
+| `/Users/axton/Documents/DailyWork🌴/Project Files/Code Projects/AxtonOpenSource/smart-illustrator/` | 代码项目（用于 Git 管理和开源） |
+| `~/.claude/skills/smart-illustrator/` | Skills 目录（Claude Code 运行时读取） |
+
+### 同步检查清单
+
+每次修改文件后，必须执行以下检查：
+
+- [ ] 修改的文件是否同步到另一个目录？
+- [ ] 新增的文件是否复制到另一个目录？
+- [ ] 删除的文件是否从另一个目录也删除？
+
+### 快速验证命令
+
+```bash
+# 对比两个目录的文件列表
+diff <(ls -R "/Users/axton/Documents/DailyWork🌴/Project Files/Code Projects/AxtonOpenSource/smart-illustrator/" | sort) <(ls -R ~/.claude/skills/smart-illustrator/ | sort)
+```
+
+### 例外文件
+
+以下文件只存在于代码项目目录，不需要同步到 skills：
+- `LICENSE` - 开源许可证
+- `.git/` - Git 版本控制
