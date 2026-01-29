@@ -79,6 +79,27 @@
 
 ---
 
+## 字体规范（硬约束）
+
+文字要轻盈、专业，禁止笨重粗黑：
+
+**标题字体**：
+- 中文：宋体/衬线体（Songti SC、Noto Serif CJK SC）
+- 英文：衬线体（Georgia、Times New Roman）
+- 字重：Regular/Normal（禁止 Bold/Heavy）
+
+**正文字体**：
+- 中文：苹方/黑体（PingFang SC、Noto Sans CJK SC）
+- 英文：无衬线体（SF Pro、Helvetica Neue）
+- 字重：Regular/Normal（禁止 Bold/Heavy）
+
+**禁止**：
+- 粗黑体（Bold、Heavy、Black 等粗字重）
+- 过于花哨的艺术字体
+- 标题和正文使用相同字体（需有层次区分）
+
+---
+
 ## 规则与禁忌（强制）
 
 - 文字精简，只放关键词

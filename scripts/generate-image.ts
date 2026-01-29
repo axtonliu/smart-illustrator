@@ -7,6 +7,9 @@
  *   npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts --prompt "A cute cat" --output cat.png
  *   npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts --prompt-file prompt.md --output image.png
  *
+ * Style-lock (reference images):
+ *   npx -y bun generate-image.ts --prompt "..." --ref style-ref.png --output image.png
+ *
  * Environment:
  *   OPENROUTER_API_KEY - OpenRouter API key (preferred)
  *   GEMINI_API_KEY - Fallback: direct Gemini API key
@@ -17,7 +20,13 @@
  */
 
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, extname, isAbsolute, resolve } from 'node:path';
+
+// Reference image interface
+interface ReferenceImage {
+  mimeType: string;
+  base64: string;
+}
 
 // API endpoints
 const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
@@ -59,6 +68,41 @@ interface OpenRouterResponse {
     message: string;
     code?: number;
   };
+}
+
+/**
+ * Load reference images and encode as base64
+ * @param paths Array of image paths (max 3)
+ * @returns Array of encoded images with mimeType
+ */
+async function loadReferenceImages(paths: string[]): Promise<ReferenceImage[]> {
+  const images: ReferenceImage[] = [];
+
+  for (const imagePath of paths.slice(0, 3)) {
+    const absolutePath = isAbsolute(imagePath)
+      ? imagePath
+      : resolve(process.cwd(), imagePath);
+
+    try {
+      const buffer = await readFile(absolutePath);
+      const ext = extname(imagePath).toLowerCase();
+      const mimeType = ext === '.png' ? 'image/png'
+                     : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+                     : ext === '.webp' ? 'image/webp'
+                     : 'image/png';
+
+      images.push({
+        mimeType,
+        base64: buffer.toString('base64')
+      });
+
+      console.log(`Loaded reference image: ${imagePath} (${(buffer.length / 1024).toFixed(1)} KB)`);
+    } catch (err) {
+      console.error(`Warning: Failed to load reference image: ${imagePath}`);
+    }
+  }
+
+  return images;
 }
 
 async function generateImageOpenRouter(
@@ -162,7 +206,8 @@ async function generateImageGemini(
   prompt: string,
   model: string,
   apiKey: string,
-  size: 'default' | '2k' = 'default'
+  size: 'default' | '2k' = 'default',
+  references: ReferenceImage[] = []
 ): Promise<{ imageData: Buffer; mimeType: string } | null> {
   const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
 
@@ -176,14 +221,38 @@ async function generateImageGemini(
     generationConfig.imageConfig = { imageSize: '2K' };
   }
 
+  // Build parts array with optional reference images
+  const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+  // Add reference images first (style-lock)
+  if (references.length > 0) {
+    parts.push({
+      text: 'Use the following images as style references. Match their visual style, color palette, and artistic approach:'
+    });
+
+    for (const ref of references) {
+      parts.push({
+        inlineData: {
+          mimeType: ref.mimeType,
+          data: ref.base64
+        }
+      });
+    }
+
+    parts.push({
+      text: '---\nNow generate a new image with the above style:'
+    });
+  }
+
+  // Add main prompt
+  parts.push({
+    text: `Generate an image: ${prompt}`
+  });
+
   const requestBody = {
     contents: [
       {
-        parts: [
-          {
-            text: `Generate an image: ${prompt}`
-          }
-        ]
+        parts
       }
     ],
     generationConfig
@@ -237,6 +306,14 @@ Options:
   --size <size>             Image size: default (~1.4K) or 2k (2048px)
   -h, --help                Show this help
 
+Style-lock Options (reference images):
+  -r, --ref <path>          Reference image for style (can use multiple, max 3)
+  --ref-weight <0-1>        Reference image weight (default: 1.0, not yet implemented)
+
+Quality Router Options (multi-candidate generation):
+  -c, --candidates <n>      Generate multiple candidates (default: 1, max: 4)
+                            Output files: output-1.png, output-2.png, etc.
+
 Environment Variables (in order of priority):
   OPENROUTER_API_KEY        OpenRouter API key (preferred, has spending limits)
   GEMINI_API_KEY            Direct Gemini API key (fallback)
@@ -254,6 +331,14 @@ Examples:
 
   # From prompt file
   npx -y bun generate-image.ts -f illustration-prompt.md -o illustration.png
+
+  # With style reference (style-lock)
+  GEMINI_API_KEY=xxx npx -y bun generate-image.ts -p "A tech diagram" -r style-ref.png -o output.png
+
+  # Generate 2 candidates for quality selection
+  npx -y bun generate-image.ts -p "A tech diagram" -c 2 -o output.png
+
+Note: Reference images require Gemini API (OpenRouter does not support multimodal input).
 `);
   process.exit(0);
 }
@@ -267,6 +352,9 @@ async function main() {
   let model: string | null = null;
   let provider: 'openrouter' | 'gemini' | null = null;
   let size: 'default' | '2k' = 'default';
+  const refPaths: string[] = [];
+  let refWeight = 1.0;
+  let candidates = 1;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -297,6 +385,17 @@ async function main() {
       case '--size':
         size = args[++i] as 'default' | '2k';
         break;
+      case '-r':
+      case '--ref':
+        refPaths.push(args[++i]);
+        break;
+      case '--ref-weight':
+        refWeight = parseFloat(args[++i]);
+        break;
+      case '-c':
+      case '--candidates':
+        candidates = Math.min(4, Math.max(1, parseInt(args[++i], 10) || 1));
+        break;
     }
   }
 
@@ -318,8 +417,19 @@ async function main() {
     }
   }
 
+  // Reference images require Gemini API (OpenRouter doesn't support multimodal input)
+  if (refPaths.length > 0 && provider === 'openrouter') {
+    if (geminiKey) {
+      console.log('Note: Reference images require Gemini API. Switching from OpenRouter to Gemini...');
+      provider = 'gemini';
+    } else {
+      console.error('Error: Reference images require GEMINI_API_KEY (OpenRouter does not support multimodal input)');
+      process.exit(1);
+    }
+  }
+
   // Validate API key for chosen provider
-  const apiKey = provider === 'openrouter' ? openrouterKey : geminiKey;
+  let apiKey = provider === 'openrouter' ? openrouterKey : geminiKey;
   if (!apiKey) {
     console.error(`Error: ${provider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'GEMINI_API_KEY'} is required for ${provider} provider`);
     process.exit(1);
@@ -342,27 +452,61 @@ async function main() {
   console.log(`Provider: ${provider}`);
   console.log(`Model: ${model}`);
   console.log(`Size: ${size}`);
+  if (refPaths.length > 0) {
+    console.log(`Reference images: ${refPaths.length}`);
+  }
+  if (candidates > 1) {
+    console.log(`Candidates: ${candidates}`);
+  }
   console.log(`Prompt: ${prompt.slice(0, 100)}${prompt.length > 100 ? '...' : ''}`);
 
   try {
-    let result;
+    // Load reference images if provided
+    const references = refPaths.length > 0 ? await loadReferenceImages(refPaths) : [];
 
-    if (provider === 'openrouter') {
-      result = await generateImageOpenRouter(prompt, model, apiKey, size);
-    } else {
-      result = await generateImageGemini(prompt, model, apiKey, size);
+    // Ensure output directory exists
+    await mkdir(dirname(output), { recursive: true });
+
+    // Generate multiple candidates if requested
+    const generatedFiles: string[] = [];
+    const ext = extname(output);
+    const baseName = output.slice(0, -ext.length);
+
+    for (let i = 1; i <= candidates; i++) {
+      const candidateOutput = candidates > 1 ? `${baseName}-${i}${ext}` : output;
+
+      console.log(candidates > 1 ? `\nGenerating candidate ${i}/${candidates}...` : '\nGenerating image...');
+
+      let result;
+
+      if (provider === 'openrouter') {
+        result = await generateImageOpenRouter(prompt, model, apiKey, size);
+      } else {
+        result = await generateImageGemini(prompt, model, apiKey, size, references);
+      }
+
+      if (!result) {
+        console.error(`Error: No image generated for candidate ${i}`);
+        continue;
+      }
+
+      await writeFile(candidateOutput, result.imageData);
+      generatedFiles.push(candidateOutput);
+
+      console.log(`✓ Saved: ${candidateOutput} (${(result.imageData.length / 1024).toFixed(1)} KB)`);
     }
 
-    if (!result) {
-      console.error('Error: No image generated');
+    // Summary
+    if (generatedFiles.length === 0) {
+      console.error('Error: No images were generated');
       process.exit(1);
     }
 
-    await mkdir(dirname(output), { recursive: true });
-    await writeFile(output, result.imageData);
-
-    console.log(`Image saved to: ${output}`);
-    console.log(`Size: ${(result.imageData.length / 1024).toFixed(1)} KB`);
+    if (candidates > 1) {
+      console.log(`\n=== Quality Router: ${generatedFiles.length} candidates generated ===`);
+      generatedFiles.forEach((f, idx) => console.log(`  ${idx + 1}. ${f}`));
+      console.log('\nReview the candidates and select the best one.');
+    }
   } catch (error) {
     console.error('Error:', error instanceof Error ? error.message : error);
     process.exit(1);

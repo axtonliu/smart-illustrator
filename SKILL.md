@@ -1,6 +1,6 @@
 ---
 name: smart-illustrator
-description: 智能配图与 PPT 信息图生成器。支持四种模式：(1) 文章配图模式 - 分析文章内容，识别最佳配图位置，生成插图；(2) PPT/Slides 模式 - 将课程脚本/文章转化为批量信息图 JSON prompt，供 Gemini 生成 PPT 幻灯片；(3) Match 模式 - 从已有图片中挑选合适的配图插入文章；(4) Cover 模式 - 生成高点击率的 YouTube/公众号封面图。触发词：配图、插图、illustrate、为文章画图、生成配图、PPT、slides、幻灯片、生成PPT、生成幻灯片、课程PPT、匹配图片、挑选配图、复用图片、封面图、缩略图、thumbnail、cover。
+description: 智能配图与 PPT 信息图生成器。支持四种模式：(1) 文章配图模式 - 分析文章内容，识别最佳配图位置，生成插图；(2) PPT/Slides 模式 - 将课程脚本/文章转化为批量信息图 JSON prompt，供 Gemini 生成 PPT 幻灯片；(3) Match 模式 - 从已有图片中挑选合适的配图插入文章；(4) Cover 模式 - 生成高点击率的 YouTube/公众号封面图。触发词：配图、插图、illustrate、为文章画图、生成配图、PPT、slides、幻灯片、生成PPT、生成幻灯片、课程PPT、匹配图片、挑选配图、复用图片、封面图、缩略图、thumbnail、cover、style-lock、风格锁定、参考图、reference image、style reference、锁定风格、品牌一致性、candidates、候选图、quality router、生成多张、多候选。
 ---
 
 # Smart Illustrator - 智能配图与 PPT 生成器
@@ -185,6 +185,84 @@ description: 智能配图与 PPT 信息图生成器。支持四种模式：(1) �
 | `--list-styles` | - | 列出 `styles/` 目录下所有可用风格 |
 | `--no-cover` | `false` | 不生成封面图（仅 article 模式） |
 | `--count` | 自动 | 指定配图数量（仅 article 模式） |
+| `--style-lock` | `false` | 启用 style-lock（从 EXTEND.md 读取配置） |
+| `--ref` | - | 参考图路径（可多次使用，最多 3 张） |
+| `--ref-weight` | `1.0` | 参考图权重（0.0-1.0） |
+| `--no-style-lock` | `false` | 临时禁用 style-lock |
+| `--save-style` | `false` | 保存当前配置到 EXTEND.md |
+| `-c, --candidates` | `1` | 生成候选图数量（最多 4 张），用于 Quality Router |
+
+### Style-lock 模式（风格锁定）
+
+为系列内容保持视觉一致性的风格锁定功能。通过参考图和持久化配置实现跨多个生成任务的风格统一。
+
+```bash
+# 启用 style-lock（从 EXTEND.md 读取配置）
+/smart-illustrator article.md --style-lock
+
+# 首次配置：提供参考图并保存
+/smart-illustrator article.md --style-lock --ref style-ref.png --save-style
+
+# 使用多张参考图
+/smart-illustrator article.md --style-lock --ref ref1.png --ref ref2.png
+
+# 临时禁用 style-lock
+/smart-illustrator article.md --no-style-lock
+
+# 临时覆盖参考图
+/smart-illustrator article.md --style-lock --ref new-ref.png
+```
+
+**Style-lock 工作流程**：
+1. 检查项目目录是否存在 `.smart-illustrator/EXTEND.md`
+2. 若不存在，检查 `~/.smart-illustrator/EXTEND.md`
+3. 读取 `style_lock` 配置（参考图、风格约束、禁止元素）
+4. 生成图像时自动应用配置
+5. 参考图通过 Gemini 多模态 API 传递
+
+**配置文件位置（优先级从高到低）**：
+```
+1. 命令行参数（--ref）
+2. 项目级：{项目目录}/.smart-illustrator/EXTEND.md
+3. 用户级：~/.smart-illustrator/EXTEND.md
+```
+
+**配置文件模板**：参考 `templates/EXTEND.md.template`
+
+**限制**：
+- 参考图功能仅支持 Gemini API（OpenRouter 不支持多模态输入）
+- 使用参考图时会自动从 OpenRouter 切换到 Gemini
+- 最多 3 张参考图
+- 参考图建议尺寸：512-1024px，过大会增加 API 延迟和费用
+
+### Quality Router（多候选图生成）
+
+生成多张候选图供用户选择，提高最终图片质量。
+
+```bash
+# 生成 2 张候选图
+/smart-illustrator article.md --candidates 2
+
+# 简写形式
+/smart-illustrator article.md -c 2
+
+# 结合参考图使用
+/smart-illustrator article.md --ref style-ref.png -c 2
+```
+
+**输出**：
+- 单候选（默认）：`output.png`
+- 多候选：`output-1.png`、`output-2.png`
+
+**工作流程**：
+1. 按指定数量生成图片
+2. 输出所有候选图路径
+3. 用户选择最佳结果
+
+**建议**：
+- 日常使用 1 张（节省成本）
+- 重要场景（封面图、课程宣传）使用 2 张
+- 最多支持 4 张
 
 ## 核心能力
 
