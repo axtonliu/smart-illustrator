@@ -1,23 +1,31 @@
 #!/usr/bin/env npx -y bun
 
 /**
- * Gemini API Image Generation Script
+ * Image Generation Script (OpenRouter / Gemini API)
  *
  * Usage:
  *   npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts --prompt "A cute cat" --output cat.png
  *   npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts --prompt-file prompt.md --output image.png
  *
  * Environment:
- *   GEMINI_API_KEY - Required. Get from https://aistudio.google.com/apikey
+ *   OPENROUTER_API_KEY - OpenRouter API key (preferred)
+ *   GEMINI_API_KEY - Fallback: direct Gemini API key
  *
  * Models:
- *   --model gemini-3-pro-image-preview (default, Nano-Banana Pro, 2K quality)
+ *   google/gemini-3-pro-image-preview (default for OpenRouter)
+ *   gemini-3-pro-image-preview (default for direct Gemini)
  */
 
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
+// API endpoints
+const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+// Default models
+const DEFAULT_OPENROUTER_MODEL = 'google/gemini-3-pro-image-preview';
+const DEFAULT_GEMINI_MODEL = 'gemini-3-pro-image-preview';
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -37,12 +45,134 @@ interface GeminiResponse {
   };
 }
 
-async function generateImage(
+interface OpenRouterResponse {
+  choices?: Array<{
+    message?: {
+      content?: string | Array<{
+        type: string;
+        image_url?: { url: string };
+        text?: string;
+      }>;
+    };
+  }>;
+  error?: {
+    message: string;
+    code?: number;
+  };
+}
+
+async function generateImageOpenRouter(
   prompt: string,
   model: string,
-  apiKey: string
+  apiKey: string,
+  size: 'default' | '2k' = 'default'
+): Promise<{ imageData: Buffer; mimeType: string } | null> {
+  // For 2K, add size hint to prompt (OpenRouter doesn't support imageConfig)
+  const sizeHint = size === '2k' ? ' Output in 2K resolution (2048x2048 or similar high resolution).' : '';
+  const fullPrompt = prompt + sizeHint;
+  const url = `${OPENROUTER_API_BASE}/chat/completions`;
+
+  // OpenRouter with Gemini image model - use modalities parameter per official docs
+  const requestBody = {
+    model: model,
+    messages: [
+      {
+        role: 'user',
+        content: fullPrompt
+      }
+    ],
+    // Key: request image output modality
+    modalities: ['image', 'text']
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://github.com/axtonliu/smart-illustrator',
+      'X-Title': 'Smart Illustrator'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  const data = await response.json();
+
+  if (data.error) {
+    throw new Error(`OpenRouter API Error: ${data.error.message || JSON.stringify(data.error)}`);
+  }
+
+  const choice = data.choices?.[0];
+  const message = choice?.message;
+
+  // Format 1: Official OpenRouter format - images array in message
+  // Per official docs: response.choices[0].message.images[].image_url.url
+  if (message?.images && Array.isArray(message.images)) {
+    for (const image of message.images) {
+      const imageUrl = image?.image_url?.url;
+      if (imageUrl) {
+        const base64Match = imageUrl.match(/data:image\/([^;]+);base64,(.+)/);
+        if (base64Match) {
+          const mimeType = `image/${base64Match[1]}`;
+          const imageData = Buffer.from(base64Match[2], 'base64');
+          return { imageData, mimeType };
+        }
+      }
+    }
+  }
+
+  // Format 2: content as array with image parts
+  const content = message?.content;
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      // Check image_url format
+      if (part.type === 'image_url' && part.image_url?.url) {
+        const base64Match = part.image_url.url.match(/data:image\/([^;]+);base64,(.+)/);
+        if (base64Match) {
+          const mimeType = `image/${base64Match[1]}`;
+          const imageData = Buffer.from(base64Match[2], 'base64');
+          return { imageData, mimeType };
+        }
+      }
+      // Check inline_data format (Gemini-style)
+      if (part.inline_data?.data) {
+        const imageData = Buffer.from(part.inline_data.data, 'base64');
+        return { imageData, mimeType: part.inline_data.mime_type || 'image/png' };
+      }
+    }
+  }
+
+  // Format 3: content as string with base64
+  if (typeof content === 'string') {
+    const base64Match = content.match(/data:image\/([^;]+);base64,(.+)/);
+    if (base64Match) {
+      const mimeType = `image/${base64Match[1]}`;
+      const imageData = Buffer.from(base64Match[2], 'base64');
+      return { imageData, mimeType };
+    }
+  }
+
+  // Debug: show what we got
+  throw new Error('OpenRouter did not return an image. Response: ' + JSON.stringify(data).slice(0, 1000));
+}
+
+async function generateImageGemini(
+  prompt: string,
+  model: string,
+  apiKey: string,
+  size: 'default' | '2k' = 'default'
 ): Promise<{ imageData: Buffer; mimeType: string } | null> {
   const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
+
+  // Build generation config based on size
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ['IMAGE', 'TEXT']
+  };
+
+  // Only add imageConfig for 2K resolution
+  if (size === '2k') {
+    generationConfig.imageConfig = { imageSize: '2K' };
+  }
 
   const requestBody = {
     contents: [
@@ -54,12 +184,7 @@ async function generateImage(
         ]
       }
     ],
-    generationConfig: {
-      responseModalities: ['IMAGE', 'TEXT'],
-      imageConfig: {
-        imageSize: '2K'
-      }
-    }
+    generationConfig
   };
 
   const response = await fetch(url, {
@@ -95,7 +220,7 @@ async function generateImage(
 
 function printUsage(): never {
   console.log(`
-Gemini Image Generation Script
+Image Generation Script (OpenRouter / Gemini API)
 
 Usage:
   npx -y bun generate-image.ts --prompt "description" --output image.png
@@ -105,18 +230,25 @@ Options:
   -p, --prompt <text>       Image description
   -f, --prompt-file <path>  Read prompt from file
   -o, --output <path>       Output image path (default: generated.png)
-  -m, --model <model>       Model to use (default: gemini-3-pro-image-preview)
+  -m, --model <model>       Model to use
+  --provider <provider>     API provider: openrouter (default) or gemini
+  --size <size>             Image size: default (~1.4K) or 2k (2048px)
   -h, --help                Show this help
 
-Environment:
-  GEMINI_API_KEY            Required. Get from https://aistudio.google.com/apikey
+Environment Variables (in order of priority):
+  OPENROUTER_API_KEY        OpenRouter API key (preferred, has spending limits)
+  GEMINI_API_KEY            Direct Gemini API key (fallback)
 
 Models:
-  gemini-3-pro-image-preview (default, Nano-Banana Pro, 2K quality)
+  OpenRouter: google/gemini-3-pro-image-preview (default)
+  Gemini:     gemini-3-pro-image-preview (default)
 
 Examples:
-  # Simple prompt
-  npx -y bun generate-image.ts -p "A futuristic city at sunset" -o city.png
+  # Using OpenRouter (default)
+  OPENROUTER_API_KEY=xxx npx -y bun generate-image.ts -p "A futuristic city" -o city.png
+
+  # Using direct Gemini API
+  GEMINI_API_KEY=xxx npx -y bun generate-image.ts -p "A cute cat" -o cat.png --provider gemini
 
   # From prompt file
   npx -y bun generate-image.ts -f illustration-prompt.md -o illustration.png
@@ -130,7 +262,9 @@ async function main() {
   let prompt: string | null = null;
   let promptFile: string | null = null;
   let output = 'generated.png';
-  let model = 'gemini-3-pro-image-preview';
+  let model: string | null = null;
+  let provider: 'openrouter' | 'gemini' | null = null;
+  let size: 'default' | '2k' = 'default';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -155,14 +289,43 @@ async function main() {
       case '--model':
         model = args[++i];
         break;
+      case '--provider':
+        provider = args[++i] as 'openrouter' | 'gemini';
+        break;
+      case '--size':
+        size = args[++i] as 'default' | '2k';
+        break;
     }
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  // Determine provider and API key
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  // Auto-detect provider if not specified
+  // Prefer OpenRouter (has spending limits) over direct Gemini
+  if (!provider) {
+    if (openrouterKey) {
+      provider = 'openrouter';
+    } else if (geminiKey) {
+      provider = 'gemini';
+    } else {
+      console.error('Error: No API key found');
+      console.error('Set OPENROUTER_API_KEY or GEMINI_API_KEY environment variable');
+      process.exit(1);
+    }
+  }
+
+  // Validate API key for chosen provider
+  const apiKey = provider === 'openrouter' ? openrouterKey : geminiKey;
   if (!apiKey) {
-    console.error('Error: GEMINI_API_KEY environment variable is required');
-    console.error('Get your API key from: https://aistudio.google.com/apikey');
+    console.error(`Error: ${provider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'GEMINI_API_KEY'} is required for ${provider} provider`);
     process.exit(1);
+  }
+
+  // Set default model based on provider
+  if (!model) {
+    model = provider === 'openrouter' ? DEFAULT_OPENROUTER_MODEL : DEFAULT_GEMINI_MODEL;
   }
 
   if (promptFile) {
@@ -174,11 +337,19 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Generating image with ${model}...`);
+  console.log(`Provider: ${provider}`);
+  console.log(`Model: ${model}`);
+  console.log(`Size: ${size}`);
   console.log(`Prompt: ${prompt.slice(0, 100)}${prompt.length > 100 ? '...' : ''}`);
 
   try {
-    const result = await generateImage(prompt, model, apiKey);
+    let result;
+
+    if (provider === 'openrouter') {
+      result = await generateImageOpenRouter(prompt, model, apiKey, size);
+    } else {
+      result = await generateImageGemini(prompt, model, apiKey, size);
+    }
 
     if (!result) {
       console.error('Error: No image generated');
