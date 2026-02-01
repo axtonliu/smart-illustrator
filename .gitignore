@@ -20,6 +20,9 @@ Thumbs.db
 # Test outputs (optional - comment out if you want to commit examples)
 test-output/
 
+# Sensitive/private files
+references/文章自动配图工具.md
+
 # Logs
 *.log
 npm-debug.log*
