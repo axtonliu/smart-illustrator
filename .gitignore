@@ -23,6 +23,13 @@ test-output/
 # Sensitive/private files
 references/文章自动配图工具.md
 
+# Internal development documents (kept locally, not for public repo)
+CLAUDE.md
+DEVELOPMENT.md
+PROGRESS.md
+TEST-PLAN.md
+DESIGN-*.md
+
 # Logs
 *.log
 npm-debug.log*
