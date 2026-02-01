@@ -38,6 +38,9 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models
 const DEFAULT_OPENROUTER_MODEL = 'google/gemini-3-pro-image-preview';
 const DEFAULT_GEMINI_MODEL = 'gemini-3-pro-image-preview';
 
+// Supported aspect ratios for Gemini 3 Pro Image
+type AspectRatio = '1:1' | '2:3' | '3:2' | '3:4' | '4:3' | '4:5' | '5:4' | '9:16' | '16:9' | '21:9';
+
 interface GeminiResponse {
   candidates?: Array<{
     content?: {
@@ -144,7 +147,8 @@ async function generateImageOpenRouter(
   prompt: string,
   model: string,
   apiKey: string,
-  size: 'default' | '2k' = 'default'
+  size: 'default' | '2k' = 'default',
+  aspectRatio?: AspectRatio
 ): Promise<{ imageData: Buffer; mimeType: string } | null> {
   const url = `${OPENROUTER_API_BASE}/chat/completions`;
 
@@ -161,9 +165,16 @@ async function generateImageOpenRouter(
     modalities: ['image', 'text']
   };
 
-  // Add image_config for 2K resolution (OpenRouter supports this for Gemini models)
+  // Add image_config for resolution and aspect ratio (OpenRouter supports this for Gemini models)
+  const imageConfig: Record<string, string> = {};
   if (size === '2k') {
-    requestBody.image_config = { image_size: '2K' };
+    imageConfig.image_size = '2K';
+  }
+  if (aspectRatio) {
+    imageConfig.aspect_ratio = aspectRatio;
+  }
+  if (Object.keys(imageConfig).length > 0) {
+    requestBody.image_config = imageConfig;
   }
 
   const response = await fetch(url, {
@@ -242,18 +253,26 @@ async function generateImageGemini(
   model: string,
   apiKey: string,
   size: 'default' | '2k' = 'default',
-  references: ReferenceImage[] = []
+  references: ReferenceImage[] = [],
+  aspectRatio?: AspectRatio
 ): Promise<{ imageData: Buffer; mimeType: string } | null> {
   const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
 
-  // Build generation config based on size
+  // Build generation config based on size and aspect ratio
   const generationConfig: Record<string, unknown> = {
     responseModalities: ['IMAGE', 'TEXT']
   };
 
-  // Only add imageConfig for 2K resolution
+  // Add imageConfig for resolution and aspect ratio
+  const imageConfig: Record<string, string> = {};
   if (size === '2k') {
-    generationConfig.imageConfig = { imageSize: '2K' };
+    imageConfig.imageSize = '2K';
+  }
+  if (aspectRatio) {
+    imageConfig.aspectRatio = aspectRatio;
+  }
+  if (Object.keys(imageConfig).length > 0) {
+    generationConfig.imageConfig = imageConfig;
   }
 
   // Build parts array with optional reference images
@@ -262,7 +281,7 @@ async function generateImageGemini(
   // Add reference images first (style-lock)
   if (references.length > 0) {
     parts.push({
-      text: 'Use the following images as style references. Match their visual style, color palette, and artistic approach:'
+      text: '以下图片是风格参考。请匹配它们的视觉风格、色彩搭配和艺术手法：'
     });
 
     for (const ref of references) {
@@ -275,13 +294,13 @@ async function generateImageGemini(
     }
 
     parts.push({
-      text: '---\nNow generate a new image with the above style:'
+      text: '---\n请按照上述风格生成新图片：'
     });
   }
 
   // Add main prompt
   parts.push({
-    text: `Generate an image: ${prompt}`
+    text: prompt
   });
 
   const requestBody = {
@@ -339,6 +358,7 @@ Options:
   -m, --model <model>       Model to use
   --provider <provider>     API provider: openrouter (default) or gemini
   --size <size>             Image size: 2k (2048px, default) or default (~1.4K)
+  -a, --aspect-ratio <ratio>  Aspect ratio: 1:1, 3:4, 4:3, 9:16, 16:9, 21:9, etc.
   -h, --help                Show this help
 
 Style-lock Options (reference images):
@@ -398,6 +418,7 @@ async function main() {
   let model: string | null = null;
   let provider: 'openrouter' | 'gemini' | null = null;
   let size: 'default' | '2k' = '2k';  // Default to 2K resolution
+  let aspectRatio: AspectRatio | undefined;
   const refPaths: string[] = [];
   let refWeight = 1.0;
   let candidates = 1;
@@ -437,6 +458,10 @@ async function main() {
         break;
       case '--size':
         size = args[++i] as 'default' | '2k';
+        break;
+      case '--aspect-ratio':
+      case '-a':
+        aspectRatio = args[++i] as AspectRatio;
         break;
       case '-r':
       case '--ref':
@@ -598,6 +623,9 @@ async function main() {
   console.log(`Provider: ${provider}`);
   console.log(`Model: ${model}`);
   console.log(`Size: ${size}`);
+  if (aspectRatio) {
+    console.log(`Aspect ratio: ${aspectRatio}`);
+  }
   if (refPaths.length > 0) {
     console.log(`Reference images: ${refPaths.length}`);
   }
@@ -634,9 +662,9 @@ async function main() {
       let result;
 
       if (provider === 'openrouter') {
-        result = await generateImageOpenRouter(finalPrompt, model, apiKey, size);
+        result = await generateImageOpenRouter(finalPrompt, model, apiKey, size, aspectRatio);
       } else {
-        result = await generateImageGemini(finalPrompt, model, apiKey, size, references);
+        result = await generateImageGemini(finalPrompt, model, apiKey, size, references, aspectRatio);
       }
 
       if (!result) {

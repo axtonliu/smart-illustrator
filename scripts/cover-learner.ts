@@ -406,4 +406,8 @@ Examples:
   }
 }
 
-main().catch(console.error);
+// Only run main() when executed directly (not when imported as a module)
+// Bun supports import.meta.main for this check
+if (import.meta.main) {
+  main().catch(console.error);
+}

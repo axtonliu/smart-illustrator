@@ -152,7 +152,7 @@ echo $GEMINI_API_KEY
 **预期结果：**
 - [ ] 无需文章路径
 - [ ] 根据 `--topic` 生成封面图
-- [ ] 使用深色科技风格
+- [ ] 使用深色高对比风格
 
 ---
 
@@ -285,7 +285,7 @@ cd /tmp/smart-illustrator-test/articles
 ```
 
 **预期结果：**
-- [ ] `--style dark` 使用深色科技风格
+- [ ] `--style dark` 使用深色高对比风格
 - [ ] `--style minimal` 使用极简风格
 - [ ] 风格正确应用到生成的图片
 

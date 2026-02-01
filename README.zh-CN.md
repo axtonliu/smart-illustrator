@@ -69,7 +69,7 @@ cp -r smart-illustrator/styles ~/.claude/skills/smart-illustrator/
 
 # 指定风格（从 styles/ 目录加载）
 /smart-illustrator path/to/article.md --style light     # 浅色风格（默认）
-/smart-illustrator path/to/article.md --style dark      # 深色科技风格
+/smart-illustrator path/to/article.md --style dark      # 深色高对比风格
 /smart-illustrator path/to/article.md --style minimal   # 极简风格
 
 # 列出可用风格
@@ -566,7 +566,7 @@ Skill 根据内容自动选择最佳渲染引擎：
 | `data` | Gemini | 统计、趋势 | 信息图风格 |
 | `scene` | Gemini | 故事、场景 | 叙事插画 |
 | `metaphor` | Gemini | 类比、象征 | 创意视觉 |
-| `cover` | Gemini | 文章封面 | 16:9 深色科技 |
+| `cover` | Gemini | 文章封面 | 16:9 深色高对比 |
 
 ### 类型 × 构图参考
 
@@ -598,7 +598,7 @@ Skill 根据内容自动选择最佳渲染引擎：
 - 扁平几何 + 细线勾边
 - 详见 `styles/style-light.md`
 
-### 封面图：深色科技风格
+### 封面图：深色高对比风格
 
 - 16:9 横版格式
 - 深空紫背景
