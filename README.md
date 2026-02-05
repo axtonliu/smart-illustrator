@@ -24,6 +24,14 @@ Creating illustrations for articles is time-consuming: manual design takes hours
 
 **When to use:** When you need high-quality illustrations for articles, YouTube thumbnails with best practices, or consistent visual style across content series.
 
+## Background: the Make workflow version (auto-illustrate + WeChat publish)
+
+Before packaging this into a Skill, I had already built an end-to-end Make workflow:
+**search → write → auto-illustrate → format/publish (WeChat Official Account)**.
+
+Full walkthrough (workflow logic & design trade-offs):
+https://youtu.be/TbyJ3imLuXQ
+
 ## Features
 
 - **Dual Engine System**: Auto-selects Mermaid or Gemini based on content type
