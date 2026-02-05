@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg)](#status)
 
+**[中文文档](README.zh-CN.md)**
+
 Intelligent article illustration Skill for Claude Code with **dual-engine system**: automatically selects Mermaid (for structured diagrams) or Gemini (for creative visuals) based on content type.
 
 ## Status
@@ -675,4 +677,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-© AXTONLIU™ & AI 精英学院™ 版权所有
+MIT License © [Axton Liu](https://www.axtonliu.ai)

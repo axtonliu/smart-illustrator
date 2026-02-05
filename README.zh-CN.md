@@ -773,4 +773,4 @@ MIT 许可证 - 详见 [LICENSE](LICENSE)。
 
 ---
 
-© AXTONLIU™ & AI 精英学院™ 版权所有
+MIT License © [Axton Liu](https://www.axtonliu.ai)
