@@ -152,7 +152,7 @@ description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) �
 
 **classDef 写法**（放在图表末尾）：
 
-```mermaid
+```
 classDef input fill:#d3f9d8,stroke:#2f9e44,color:#1a1a1a
 classDef process fill:#e5dbff,stroke:#5f3dc4,color:#1a1a1a
 classDef decision fill:#ffe3e3,stroke:#c92a2a,color:#1a1a1a
@@ -192,12 +192,12 @@ class D output
 
 直接嵌入代码块：
 
-```markdown
+````markdown
 ```mermaid
 flowchart LR
     A[输入] --> B[处理] --> C[输出]
 ```
-```
+````
 
 #### Gemini（创意/视觉图形）
 
