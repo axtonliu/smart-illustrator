@@ -136,10 +136,40 @@ description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) �
 
 **Mermaid**：直接以代码块嵌入文章，不生成 PNG。
 
-**Mermaid 注意事项**：
-- 节点标签**禁止**使用 `1.` `2.` 格式（会被误解为 Markdown 列表）
-- 正确：`["① 梳理任务"]` 或 `["1 梳理任务"]` 或 `["Step 1: 梳理任务"]`
-- 错误：`["1. 梳理任务"]`
+### Mermaid 语义色板
+
+每种颜色有固定含义，**必须使用 `classDef` + `class` 应用**：
+
+| 语义 | 填充色 | 边框色 | 用于 |
+|------|--------|--------|------|
+| input | #d3f9d8 | #2f9e44 | 输入、起点、数据源 |
+| process | #e5dbff | #5f3dc4 | 处理、推理、核心逻辑 |
+| decision | #ffe3e3 | #c92a2a | 决策点、分支判断 |
+| action | #ffe8cc | #d9480f | 执行动作、工具调用 |
+| output | #c5f6fa | #0c8599 | 输出、结果、终点 |
+| storage | #fff4e6 | #e67700 | 存储、记忆、数据库 |
+| meta | #e7f5ff | #1971c2 | 标题、分组、元信息 |
+
+**classDef 写法**（放在图表末尾）：
+
+```mermaid
+classDef input fill:#d3f9d8,stroke:#2f9e44,color:#1a1a1a
+classDef process fill:#e5dbff,stroke:#5f3dc4,color:#1a1a1a
+classDef decision fill:#ffe3e3,stroke:#c92a2a,color:#1a1a1a
+classDef action fill:#ffe8cc,stroke:#d9480f,color:#1a1a1a
+classDef output fill:#c5f6fa,stroke:#0c8599,color:#1a1a1a
+class A input
+class B,C process
+class D output
+```
+
+### Mermaid 布局规则
+
+- **布局方向**：默认 `TB`（上到下），横向流程用 `LR`
+- **箭头分级**：`-->` 主流程 / `-.->` 可选/辅助路径 / `==>` 重点强调
+- **分组**：用 `subgraph` 对相关节点分组，标题简洁
+- **节点文字**：≤ 8 字，无 emoji，禁止 `1.` 格式（用 `①` 或 `Step 1:`）
+- **节点数量**：单图 ≤ 15 个节点，复杂内容拆成多图
 
 **`--engine` 参数**：
 - `auto`（默认）：根据内容类型自动选择
