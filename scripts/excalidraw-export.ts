@@ -106,7 +106,7 @@ Options:
   -f, --format <fmt>     Output format: png (default) or svg
   -s, --scale <1|2|3>    Export scale (default: 2)
   -d, --dark             Enable dark mode
-  -b, --background       Include background (default: transparent)
+  -b, --background       Include background (default: white, use --no-bg for transparent)
   -e, --embed-scene      Embed scene data in exported file
   --timeout <ms>         Timeout in milliseconds (default: 30000)
   -h, --help             Show this help
@@ -120,6 +120,9 @@ Examples:
 
   # Export dark mode PNG at 3x scale
   npx -y bun excalidraw-export.ts -i diagram.excalidraw -o diagram-dark.png -d -s 3
+
+  # Export with transparent background (no white fill)
+  npx -y bun excalidraw-export.ts -i diagram.excalidraw -o diagram.png --no-bg
 
 Prerequisites:
   cd smart-illustrator/scripts && npm install
@@ -137,7 +140,7 @@ async function main() {
     format: "png",
     scale: 2,
     darkMode: false,
-    background: false,
+    background: true,
     embedScene: false,
     timeout: 30000,
   };
@@ -171,6 +174,10 @@ async function main() {
       case "-b":
       case "--background":
         opts.background = true;
+        break;
+      case "--no-bg":
+      case "--transparent":
+        opts.background = false;
         break;
       case "-e":
       case "--embed-scene":
