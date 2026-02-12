@@ -5,7 +5,7 @@
 
 **[中文文档](README.zh-CN.md)**
 
-> **🆕 v1.1 — Tri-Engine System (Feb 2026)**
+> **🆕 v1.4.0 — Tri-Engine System (Feb 2026)**
 >
 > New Excalidraw engine for hand-drawn concept diagrams. Three-tier priority: Gemini → Excalidraw → Mermaid. All diagram engines now output PNG by default. [Details →](#tri-engine-system)
 

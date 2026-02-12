@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg)](#状态说明)
 
-> **🆕 v1.1 — 三引擎系统（2026 年 2 月）**
+> **🆕 v1.4.0 — 三引擎系统（2026 年 2 月）**
 >
 > 新增 Excalidraw 手绘概念图引擎。三级优先级：Gemini → Excalidraw → Mermaid。所有图表引擎默认输出 PNG。[查看详情 →](#三引擎系统)
 
