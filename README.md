@@ -5,9 +5,13 @@
 
 **[中文文档](README.zh-CN.md)**
 
-![Dual Engine Architecture](assets/dual-engine-architecture.png)
+> **🆕 v1.1 — Tri-Engine System (Feb 2026)**
+>
+> New Excalidraw engine for hand-drawn concept diagrams. Three-tier priority: Gemini → Excalidraw → Mermaid. All diagram engines now output PNG by default. [Details →](#tri-engine-system)
 
-Intelligent article illustration Skill for Claude Code with **dual-engine system**: automatically selects Mermaid (for structured diagrams) or Gemini (for creative visuals) based on content type.
+![Tri-Engine Architecture](assets/dual-engine-architecture.png)
+
+Intelligent article illustration Skill for Claude Code with **tri-engine system**: automatically selects Gemini (for creative visuals), Excalidraw (for hand-drawn diagrams), or Mermaid (for structured diagrams) based on content type.
 
 ## Status
 
@@ -20,7 +24,7 @@ Intelligent article illustration Skill for Claude Code with **dual-engine system
 
 ## Why Smart Illustrator?
 
-Creating illustrations for articles is time-consuming: manual design takes hours, stock photos lack context, and generic AI tools don't understand article structure. Smart Illustrator combines intelligent position detection, dual-engine system (Mermaid + Gemini), and cover learning to generate contextual illustrations in minutes.
+Creating illustrations for articles is time-consuming: manual design takes hours, stock photos lack context, and generic AI tools don't understand article structure. Smart Illustrator combines intelligent position detection, tri-engine system (Gemini + Excalidraw + Mermaid), and cover learning to generate contextual illustrations in minutes.
 
 **Who it's for:** Newsletter writers, YouTube creators, technical bloggers, course instructors.
 
@@ -36,7 +40,7 @@ https://youtu.be/TbyJ3imLuXQ
 
 ## Features
 
-- **Dual Engine System**: Auto-selects Mermaid or Gemini based on content type
+- **Tri-Engine System**: Auto-selects Gemini, Excalidraw, or Mermaid based on content type
 - **Smart Position Detection**: Analyzes article structure to identify optimal illustration points
 - **10+ Illustration Types**: flowchart, sequence, mindmap, concept, comparison, scene, metaphor...
 - **Extensible Style System**: Light, Dark, Minimal, Cover, and custom styles
@@ -44,7 +48,7 @@ https://youtu.be/TbyJ3imLuXQ
 - **Multi-Platform Sizes**: YouTube, WeChat, Twitter, Xiaohongshu presets
 - **Resume Generation**: Skip already-generated images, regenerate specific ones
 - **Brand Customizable**: Modify `styles/` to apply your brand style
-- **Multiple Backends**: Mermaid CLI for diagrams, Gemini API for creative visuals (2K resolution)
+- **Multiple Backends**: Gemini API for creative visuals (2K resolution), Excalidraw for hand-drawn diagrams, Mermaid CLI for structured diagrams — all output PNG by default
 
 ## What Are Skills?
 
@@ -56,7 +60,8 @@ Skills are prompt-based extensions for [Claude Code](https://docs.anthropic.com/
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
 - [Bun](https://bun.sh/) runtime (for scripts)
-- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) (for diagram export): `npm install -g @mermaid-js/mermaid-cli`
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) (for Mermaid diagrams): `npm install -g @mermaid-js/mermaid-cli`
+- Excalidraw export dependencies (optional, for Excalidraw diagrams): `cd ~/.claude/skills/smart-illustrator/scripts && npm install && npx playwright install firefox`
 - Gemini API Key (optional, for creative visuals): https://aistudio.google.com/apikey
 
 ### Option A: Manual Installation (Recommended)
@@ -105,6 +110,8 @@ cp -r smart-illustrator/styles ~/.claude/skills/smart-illustrator/
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--mode` | `article` | Mode: `article`, `slides`, or `cover` |
+| `--engine` | `auto` | Engine: `auto`, `gemini`, `excalidraw`, or `mermaid` |
+| `--mermaid-embed` | `false` | Embed Mermaid code blocks instead of exporting PNG |
 | `--platform` | `youtube` | Cover platform: `youtube`/`wechat`/`twitter`/`xiaohongshu`/`landscape`/`square` |
 | `--topic` | - | Cover topic (alternative to article path, cover mode only) |
 | `--description` | - | Cover visual direction (cover mode only) |
@@ -440,26 +447,32 @@ The skill analyzes article structure to identify optimal illustration points:
 
 ---
 
-## Dual Engine System
+## Tri-Engine System
 
-The skill automatically selects the best rendering engine based on content:
+The skill automatically selects the best rendering engine based on content, with three-tier priority:
 
-| Engine | Best For | Output |
-|--------|----------|--------|
-| **Mermaid** | Structured diagrams (flowcharts, sequences, architectures) | Professional, precise, editable |
-| **Gemini** | Creative visuals (metaphors, scenes, infographics) | Artistic, atmospheric, branded |
+| Priority | Engine | Best For | Output |
+|----------|--------|----------|--------|
+| **1** | **Gemini** | Creative visuals (metaphors, scenes, infographics) | PNG (2K) |
+| **2** | **Excalidraw** | Hand-drawn concept diagrams, comparisons, simple flows | PNG |
+| **3** | **Mermaid** | Complex structured diagrams (flowcharts, sequences, architectures) | PNG |
+
+**Selection logic:**
+- Needs metaphor, emotion, or creative expression → Gemini
+- Needs hand-drawn / informal style, or simple concept relationships → Excalidraw
+- Complex structured flows / architectures → Mermaid
 
 ## Illustration Types
 
 | Type | Engine | Best For | Syntax/Style |
 |------|--------|----------|--------------|
-| `process` | Mermaid | Steps, workflows | `flowchart` |
+| `process` | Mermaid | Complex workflows | `flowchart` |
 | `architecture` | Mermaid | System components | `block-beta` |
 | `sequence` | Mermaid | API calls, interactions | `sequenceDiagram` |
 | `mindmap` | Mermaid | Knowledge structure | `mindmap` |
 | `state` | Mermaid | State transitions | `stateDiagram` |
-| `concept` | Gemini | Abstract concepts | Center-radial |
-| `comparison` | Gemini | A vs B, contrasts | Left-right split |
+| `concept` | Excalidraw / Gemini | Abstract concepts | Hand-drawn / Center-radial |
+| `comparison` | Excalidraw / Gemini | A vs B, contrasts | Hand-drawn / Left-right split |
 | `data` | Gemini | Statistics, trends | Infographic style |
 | `scene` | Gemini | Stories, scenarios | Narrative illustration |
 | `metaphor` | Gemini | Analogies, symbols | Creative visual |
@@ -519,7 +532,9 @@ smart-illustrator/
 ├── scripts/
 │   ├── generate-image.ts     # Gemini single image generation
 │   ├── batch-generate.ts     # Gemini batch generation (2K, resume support)
-│   └── mermaid-export.ts     # Mermaid diagram to PNG export
+│   ├── mermaid-export.ts     # Mermaid diagram to PNG export
+│   ├── excalidraw-export.ts  # Excalidraw diagram to PNG export
+│   └── package.json          # Script dependencies (Excalidraw export)
 ├── styles/
 │   ├── brand-colors.md       # Brand palette (customizable)
 │   ├── style-light.md        # Light style Gemini prompt (default)
@@ -528,7 +543,8 @@ smart-illustrator/
 │   └── style-cover.md        # Cover/thumbnail style (cover mode)
 └── references/
     ├── slides-prompt-example.json  # PPT mode JSON format example
-    └── cover-best-practices.md     # YouTube thumbnail best practices
+    ├── cover-best-practices.md     # YouTube thumbnail best practices
+    └── excalidraw-guide.md         # Excalidraw JSON specification
 ```
 
 ## Customization
@@ -664,6 +680,8 @@ This project builds upon these excellent tools:
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - Anthropic's AI coding assistant
 - [Mermaid](https://mermaid.js.org/) - Diagramming and charting tool
 - [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Command line interface for Mermaid
+- [Excalidraw](https://excalidraw.com/) - Virtual whiteboard for hand-drawn diagrams
+- [Playwright](https://playwright.dev/) - Browser automation (for Excalidraw PNG export)
 - [Gemini API](https://ai.google.dev/) - Google's image generation API
 - [Bun](https://bun.sh/) - Fast JavaScript runtime
 

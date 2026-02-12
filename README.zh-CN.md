@@ -5,9 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg)](#状态说明)
 
-![双引擎架构](assets/dual-engine-architecture.png)
+> **🆕 v1.1 — 三引擎系统（2026 年 2 月）**
+>
+> 新增 Excalidraw 手绘概念图引擎。三级优先级：Gemini → Excalidraw → Mermaid。所有图表引擎默认输出 PNG。[查看详情 →](#三引擎系统)
 
-Claude Code 的智能文章配图 Skill，采用**双引擎系统**：根据内容类型自动选择 Mermaid（结构化图表）或 Gemini（创意视觉）。
+![三引擎架构](assets/dual-engine-architecture.png)
+
+Claude Code 的智能文章配图 Skill，采用**三引擎系统**：根据内容类型自动选择 Gemini（创意视觉）、Excalidraw（手绘图表）或 Mermaid（结构化图表）。
 
 ## 状态说明
 
@@ -20,7 +24,7 @@ Claude Code 的智能文章配图 Skill，采用**双引擎系统**：根据内�
 
 ## 为什么选择 Smart Illustrator？
 
-为文章配图很费时间：手动设计需要数小时，图库图片缺乏定制性，通用 AI 工具不理解文章结构。Smart Illustrator 结合智能位置检测、双引擎系统（Mermaid + Gemini）和封面学习，几分钟内生成符合上下文的插图。
+为文章配图很费时间：手动设计需要数小时，图库图片缺乏定制性，通用 AI 工具不理解文章结构。Smart Illustrator 结合智能位置检测、三引擎系统（Gemini + Excalidraw + Mermaid）和封面学习，几分钟内生成符合上下文的插图。
 
 **适合谁用：** Newsletter 作者、YouTube 创作者、技术博客作者、课程讲师。
 
@@ -36,7 +40,7 @@ https://youtu.be/TbyJ3imLuXQ
 
 ## 功能特性
 
-- **双引擎系统**：根据内容类型自动选择 Mermaid 或 Gemini
+- **三引擎系统**：根据内容类型自动选择 Gemini、Excalidraw 或 Mermaid
 - **智能位置识别**：分析文章结构，识别最佳配图位置
 - **10+ 配图类型**：流程图、时序图、思维导图、概念图、对比图、场景图、隐喻图...
 - **可扩展风格系统**：浅色、深色、极简、封面，支持自定义风格
@@ -44,7 +48,7 @@ https://youtu.be/TbyJ3imLuXQ
 - **多平台尺寸**：YouTube、公众号、Twitter、小红书等预设尺寸
 - **断点续传**：跳过已生成的图片，支持重新生成指定图片
 - **品牌可定制**：修改 `styles/` 目录即可应用你的品牌风格
-- **多后端支持**：Mermaid CLI 生成图表，Gemini API 生成创意视觉（2K 分辨率）
+- **多后端支持**：Gemini API 生成创意视觉（2K 分辨率）、Excalidraw 生成手绘图表、Mermaid CLI 生成结构化图表 — 全部默认输出 PNG
 
 ## 什么是 Skills？
 
@@ -56,7 +60,8 @@ Skills 是 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 的 pro
 
 - 已安装 [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 - [Bun](https://bun.sh/) 运行时（用于脚本）
-- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli)（用于图表导出）：`npm install -g @mermaid-js/mermaid-cli`
+- [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli)（用于 Mermaid 图表）：`npm install -g @mermaid-js/mermaid-cli`
+- Excalidraw 导出依赖（可选，用于 Excalidraw 图表）：`cd ~/.claude/skills/smart-illustrator/scripts && npm install && npx playwright install firefox`
 - Gemini API Key（可选，用于创意视觉）：https://aistudio.google.com/apikey
 
 ### 方式 A：手动安装（推荐）
@@ -105,6 +110,8 @@ cp -r smart-illustrator/styles ~/.claude/skills/smart-illustrator/
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
 | `--mode` | `article` | 模式：`article`、`slides` 或 `cover` |
+| `--engine` | `auto` | 引擎：`auto`、`gemini`、`excalidraw` 或 `mermaid` |
+| `--mermaid-embed` | `false` | 嵌入 Mermaid 代码块而非导出 PNG |
 | `--platform` | `youtube` | 封面平台：`youtube`/`wechat`/`twitter`/`xiaohongshu`/`landscape`/`square` |
 | `--topic` | - | 封面主题（可替代文章路径，仅 cover 模式） |
 | `--description` | - | 封面视觉方向（仅 cover 模式） |
@@ -563,26 +570,32 @@ Skill 分析文章结构，识别最佳配图位置：
 
 ---
 
-## 双引擎系统
+## 三引擎系统
 
-Skill 根据内容自动选择最佳渲染引擎：
+Skill 根据内容自动选择最佳渲染引擎，三级优先级：
 
-| 引擎 | 适用场景 | 输出特点 |
-|------|----------|----------|
-| **Mermaid** | 结构化图表（流程图、时序图、架构图） | 专业、精确、可编辑 |
-| **Gemini** | 创意视觉（隐喻图、场景图、信息图） | 艺术、氛围、品牌化 |
+| 优先级 | 引擎 | 适用场景 | 输出 |
+|--------|------|----------|------|
+| **1** | **Gemini** | 创意视觉（隐喻图、场景图、信息图） | PNG (2K) |
+| **2** | **Excalidraw** | 手绘概念图、对比图、简单流程 | PNG |
+| **3** | **Mermaid** | 复杂结构化图表（流程图、时序图、架构图） | PNG |
+
+**选择逻辑：**
+- 需要隐喻、情感、创意表达 → Gemini
+- 需要手绘/非正式风格，或简单概念关系 → Excalidraw
+- 复杂结构化流程/架构 → Mermaid
 
 ## 配图类型
 
 | 类型 | 引擎 | 适用场景 | 语法/风格 |
 |------|------|----------|-----------|
-| `process` | Mermaid | 步骤、工作流 | `flowchart` |
+| `process` | Mermaid | 复杂工作流 | `flowchart` |
 | `architecture` | Mermaid | 系统组件 | `block-beta` |
 | `sequence` | Mermaid | API 调用、交互 | `sequenceDiagram` |
 | `mindmap` | Mermaid | 知识结构 | `mindmap` |
 | `state` | Mermaid | 状态转换 | `stateDiagram` |
-| `concept` | Gemini | 抽象概念 | 中心辐射 |
-| `comparison` | Gemini | A vs B、对比 | 左右分栏 |
+| `concept` | Excalidraw / Gemini | 抽象概念 | 手绘 / 中心辐射 |
+| `comparison` | Excalidraw / Gemini | A vs B、对比 | 手绘 / 左右分栏 |
 | `data` | Gemini | 统计、趋势 | 信息图风格 |
 | `scene` | Gemini | 故事、场景 | 叙事插画 |
 | `metaphor` | Gemini | 类比、象征 | 创意视觉 |
@@ -642,7 +655,9 @@ smart-illustrator/
 ├── scripts/
 │   ├── generate-image.ts     # Gemini 单张图片生成
 │   ├── batch-generate.ts     # Gemini 批量生成（2K、断点续传）
-│   └── mermaid-export.ts     # Mermaid 图表导出为 PNG
+│   ├── mermaid-export.ts     # Mermaid 图表导出为 PNG
+│   ├── excalidraw-export.ts  # Excalidraw 图表导出为 PNG
+│   └── package.json          # 脚本依赖（Excalidraw 导出）
 ├── styles/
 │   ├── brand-colors.md       # 品牌色板（可自定义）
 │   ├── style-light.md        # 浅色风格 Gemini Prompt（默认）
@@ -651,7 +666,8 @@ smart-illustrator/
 │   └── style-cover.md        # 封面图风格（cover 模式）
 └── references/
     ├── slides-prompt-example.json  # PPT 模式 JSON 格式示例
-    └── cover-best-practices.md     # YouTube 封面图最佳实践
+    ├── cover-best-practices.md     # YouTube 封面图最佳实践
+    └── excalidraw-guide.md         # Excalidraw JSON 规范
 ```
 
 ## 自定义
@@ -760,6 +776,8 @@ mmdc -i input.mmd -o output.png -s 3 -w 1600 -b white
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - Anthropic 的 AI 编程助手
 - [Mermaid](https://mermaid.js.org/) - 图表绘制工具
 - [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) - Mermaid 命令行接口
+- [Excalidraw](https://excalidraw.com/) - 手绘风格虚拟白板
+- [Playwright](https://playwright.dev/) - 浏览器自动化（用于 Excalidraw PNG 导出）
 - [Gemini API](https://ai.google.dev/) - Google 的图片生成 API
 - [Bun](https://bun.sh/) - 快速 JavaScript 运行时
 
