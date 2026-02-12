@@ -1,0 +1,9 @@
+{
+  "name": "smart-illustrator-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "excalidraw-brute-export-cli": "0.4.0"
+  }
+}
