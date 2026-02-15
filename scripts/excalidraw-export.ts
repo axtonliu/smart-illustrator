@@ -126,12 +126,77 @@ async function exportWithPlaywright(opts: ExportOptions): Promise<void> {
     }
 
     await exportMenuItem.click({ timeout: opts.timeout });
-    await page.waitForTimeout(1000);
+
+    // Wait for export dialog to be ready (not just a fixed timeout)
+    const exportDialog = page.locator(".ImageExportDialog, .ImageExportModal, .ExportDialog");
+    await exportDialog.waitFor({ state: "visible", timeout: opts.timeout }).catch(() => {
+      // Fallback: if dialog class changed, wait a fixed time
+      return page.waitForTimeout(1500);
+    });
+
+    // Configure export options in the dialog
+    console.log("  Configuring export options...");
+
+    // Helper: fail fast when user explicitly set a non-default option but control is missing
+    const requireControl = async (
+      locator: ReturnType<typeof page.locator>,
+      name: string,
+      isNonDefault: boolean
+    ): Promise<boolean> => {
+      const found = (await locator.count()) > 0;
+      if (!found && isNonDefault) {
+        throw new Error(
+          `Export option "${name}" not found in dialog. ` +
+          `Excalidraw UI may have changed. Cannot apply --${name.toLowerCase()} setting.`
+        );
+      }
+      return found;
+    };
+
+    // Set scale (radio buttons: 1×, 2×, 3×)
+    const scaleLabel = `${opts.scale}×`;
+    const scaleRadio = page.locator(
+      `.RadioGroup__choice:has-text("${scaleLabel}") input`
+    );
+    if (await requireControl(scaleRadio, "scale", opts.scale !== 2)) {
+      await scaleRadio.click();
+    }
+
+    // Set dark mode switch
+    const darkSwitch = page.locator('input[name="exportDarkModeSwitch"]');
+    if (await requireControl(darkSwitch, "dark", opts.darkMode)) {
+      const isDark = await darkSwitch.isChecked();
+      if (opts.darkMode !== isDark) {
+        await darkSwitch.click({ force: true });
+      }
+    }
+
+    // Set background switch
+    const bgSwitch = page.locator('input[name="exportBackgroundSwitch"]');
+    if (await requireControl(bgSwitch, "background", !opts.background)) {
+      const hasBg = await bgSwitch.isChecked();
+      if (opts.background !== hasBg) {
+        await bgSwitch.click({ force: true });
+      }
+    }
+
+    // Set embed scene switch
+    const embedSwitch = page.locator('input[name="exportEmbedSwitch"]');
+    if (await requireControl(embedSwitch, "embed-scene", opts.embedScene)) {
+      const isEmbed = await embedSwitch.isChecked();
+      if (opts.embedScene !== isEmbed) {
+        await embedSwitch.click({ force: true });
+      }
+    }
+
+    await page.waitForTimeout(500);
 
     // Select format and trigger download
     const formatLabel =
       opts.format === "svg" ? "Export to SVG" : "Export to PNG";
-    console.log(`  Clicking ${formatLabel}...`);
+    console.log(
+      `  Exporting ${formatLabel} (scale: ${opts.scale}x, dark: ${opts.darkMode}, bg: ${opts.background})...`
+    );
 
     const downloadPromise = page.waitForEvent("download", {
       timeout: opts.timeout,
