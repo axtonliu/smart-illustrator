@@ -1,6 +1,6 @@
 ---
 name: smart-illustrator
-description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) 文章配图模式 - 分析文章内容，生成插图；(2) PPT/Slides 模式 - 生成批量信息图；(3) Cover 模式 - 生成封面图。所有模式默认生成图片，`--prompt-only` 只输出 prompt。触发词：配图、插图、PPT、slides、封面图、thumbnail、cover。
+description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) 文章配图模式 - 分析文章内容，生成插图；(2) PPT/Slides 模式 - 生成批量信息图；(3) Cover 模式 - 生成封面图。所有模式默认生成图片，`--prompt-only` 只输出 prompt。支持 Bento Grid 功能展示图风格（--style bento）。触发词：配图、插图、PPT、slides、封面图、thumbnail、cover、bento grid、功能展示图、feature showcase。
 ---
 
 # Smart Illustrator - 智能配图与 PPT 生成器
@@ -26,6 +26,7 @@ description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) �
 | 文章配图（默认） | `styles/style-light.md` |
 | Cover 封面图 | `styles/style-cover.md` |
 | `--style dark` | `styles/style-dark.md` |
+| `--style bento` | `styles/style-bento.md` |
 
 **禁止自己编写 System Prompt。**
 
@@ -98,7 +99,7 @@ description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) �
 | `--platform` | `youtube` | 封面图平台（仅 cover 模式） |
 | `--topic` | - | 封面图主题（仅 cover 模式） |
 | `--prompt-only` | `false` | 输出 prompt 到剪贴板，不调用 API（适用于所有模式） |
-| `--style` | `light` | 风格：`light` / `dark` / `minimal` |
+| `--style` | `light` | 风格：`light` / `dark` / `minimal` / `bento` |
 | `--no-cover` | `false` | 不生成封面图 |
 | `--ref` | - | 参考图路径（可多次使用） |
 | `-c, --candidates` | `1` | 候选图数量（最多 4） |
