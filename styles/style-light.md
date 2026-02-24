@@ -2,6 +2,8 @@
 
 用于正文配图的 Gemini Prompt 风格模板。
 
+> **默认色板**：`brand-colors.md` → **Light Neutral / 浅色中性**
+
 ## 适用场景
 
 - 文章配图

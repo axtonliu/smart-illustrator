@@ -14,34 +14,11 @@ Apple 风格 Bento Grid 布局，用于产品功能展示、开源项目 README 
 
 ## 配色方案
 
+> **默认色板**：`brand-colors.md` → **High Contrast / 高对比展示**
+>
+> 色板定义、配色逻辑、备选强调色均在 `brand-colors.md` 中维护。本文件只定义构图和视觉语言，不重复定义颜色。
+
 Bento Grid 使用 **单强调色 + 深底色** 方案，与封面图的双色光线系统不同——因为网格信息密度高，双色会造成视觉混乱。
-
-### 默认配色：Deep Navy + Warm Orange
-
-| 元素 | 颜色 | Hex | 说明 |
-|------|------|-----|------|
-| 背景 | Deep Navy | `#1a1a2e` | 带蓝紫色调的深色，比纯黑更有温度和层次 |
-| 卡片背景 | 略浅于背景 | `#252547` | 通过微妙明度差区分卡片与底色 |
-| 强调色 | Warm Orange | `#ff6b35` | 图标、高亮元素、交互暗示 |
-| 主文字 | 纯白 | `#ffffff` | 英文标题、中文短描述 |
-| 次文字 | 浅灰 | `#a0a0b8` | 辅助说明文字 |
-
-### 配色选择逻辑
-
-- `#1a1a2e` 而非 `#0A0A0A`：纯黑适合封面图的戏剧感，但 Bento Grid 需要"温暖的技术感"——deep navy 的蓝紫底色让卡片有空间层次
-- `#ff6b35` 而非 `#F59E0B`：琥珀橙太柔和，在小图标上缺乏冲击力；warm orange 更红更饱和，在深蓝底上对比度极高但不刺眼
-- 单色而非双色：每个格子都有图标+文字，信息密度已经很高，单一强调色保持视觉统一
-
-### 备选配色
-
-可根据产品调性替换强调色，保持 deep navy 背景不变：
-
-| 调性 | 强调色 | Hex | 适合 |
-|------|--------|-----|------|
-| 活力/创意 | Warm Orange | `#ff6b35` | 开发者工具、创作者产品 |
-| 专业/可靠 | Electric Blue | `#4a9eff` | 企业工具、基础设施 |
-| 增长/健康 | Emerald Green | `#34d399` | 效率工具、环保/健康产品 |
-| 高端/品牌 | Soft Purple | `#a78bfa` | 设计工具、品牌产品 |
 
 ---
 
@@ -172,9 +149,7 @@ No device mockups. Pure iconographic Bento Grid. Icons should be simple line-art
 
 ## 水印策略
 
-**Bento Grid 不加水印**：
-- 功能展示图通常用于 README / Landing Page，水印破坏专业感
-- 产品名本身已在图中，起到品牌标识作用
+见 `brand-colors.md` → Watermark 配置。Bento Grid 不加水印。
 
 ---
 
