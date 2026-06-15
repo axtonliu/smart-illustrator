@@ -128,20 +128,18 @@ description: 智能配图与 PPT 信息图生成器。支持三种模式：(1) �
 
 ---
 
-## 三级配图引擎
+## 配图引擎
 
-| 优先级 | 引擎 | 适用场景 | 输出 |
-|--------|------|---------|------|
-| **1** | Gemini | 隐喻图、创意图、封面图、无法用图表表达的概念 | PNG |
-| **2** | Excalidraw | 概念图、对比图、简单流程（≤ 8 节点）、关系图、手绘风格示意图 | PNG |
-| **3** | Mermaid | **仅限**：复杂流程（> 8 节点）、多层架构图、多角色时序图、多分支决策树 | PNG |
+| 引擎 | 自动选择 | 适用场景 | 输出 |
+|------|---------|---------|------|
+| **Gemini** | ✅ 默认 | 几乎所有配图：隐喻图、概念图、对比图、创意图、封面图 | PNG |
+| **Mermaid** | ✅ 仅复杂结构 | **仅限**：复杂流程（> 8 节点）、多层架构图、多角色时序图、多分支决策树 | PNG |
+| **Excalidraw** | ❌ 手动指定 | `--engine excalidraw` 时才使用，适合需要后续编辑的草稿图 | PNG |
 
-选择逻辑：
-- 需要隐喻、情感、创意表达 → Gemini
-- 概念关系、对比、简单流程 → Excalidraw（**大多数图表场景的首选**）
+auto 选择逻辑：
+- **默认用 Gemini** — 概念图、对比图、简单流程等都用 Gemini
 - **只有**节点 > 8、多层/多角色的复杂结构化图形 → Mermaid
-- Mermaid 视觉表现力有限，能用 Excalidraw 就不用 Mermaid
-- 唯一目标：提高文章吸引力
+- Excalidraw 不参与自动选择，需 `--engine excalidraw` 手动指定
 
 生成 Excalidraw 前必须读取 `references/excalidraw-guide.md`。
 
@@ -181,9 +179,9 @@ class D output
 - **节点数量**：单图 ≤ 15 个节点，复杂内容拆成多图
 
 **`--engine` 参数**：
-- `auto`（默认）：根据内容类型自动选择（优先级 Gemini > Excalidraw > Mermaid）
-- `gemini`：强制只使用 Gemini（适合创意内容）
-- `excalidraw`：强制只使用 Excalidraw（适合手绘概念图）
+- `auto`（默认）：Gemini 优先，仅复杂结构用 Mermaid
+- `gemini`：强制只使用 Gemini
+- `excalidraw`：强制只使用 Excalidraw（适合需要后续编辑的图）
 - `mermaid`：强制只使用 Mermaid（适合技术文档）
 
 ---
@@ -194,7 +192,7 @@ class D output
 
 1. 读取文章内容
 2. 识别配图位置（通常 3-5 个）
-3. 为每个位置确定引擎（Gemini / Excalidraw / Mermaid）
+3. 为每个位置确定引擎（Gemini / Mermaid，或用户指定 Excalidraw）
 
 ### Step 2: 生成图片
 
