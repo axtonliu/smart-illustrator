@@ -267,6 +267,32 @@ GEMINI_API_KEY=$GEMINI_API_KEY npx -y bun ~/.claude/skills/smart-illustrator/scr
 
 **参数传递**：用户指定的 `--no-config`、`--ref`、`-c` 必须传递给脚本。
 
+#### 可选 provider：Atlas Cloud
+
+Gemini 官方 API 在部分地区不能直连。脚本支持 `--provider atlas`，用
+[Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=smart-illustrator)
+调同一批模型，只需要 `ATLASCLOUD_API_KEY`。默认 provider 顺序不变
+（OPENROUTER → GEMINI → ATLASCLOUD），不配这个 key 时行为完全一致。
+
+```bash
+ATLASCLOUD_API_KEY=$ATLASCLOUD_API_KEY npx -y bun ~/.claude/skills/smart-illustrator/scripts/generate-image.ts \
+  --prompt-file /tmp/image-prompt.txt \
+  --output {输出路径}.png \
+  --provider atlas \
+  --aspect-ratio 16:9
+```
+
+实测差异（选之前先知道）：
+
+- **`--ref` 在这条路上可用**：Atlas 把参考图放在 `images` 字段，脚本会自动把调用名切到模型的
+  `/edit` 任务。这也意味着 OpenRouter + `--ref` 的场景现在多了一条回退（原来只能回退到 Gemini）。
+- **`--aspect-ratio` 有效**：默认模型 `google/nano-banana-pro/text-to-image` 认 `aspect_ratio`
+  （16:9 实测 1376×768）。
+- **`--size 2k` 在该模型上没有对应字段**，脚本会打印提示并返回模型默认分辨率；需要精确尺寸时换
+  `--model bytedance/seedream-v4`，它精确遵守尺寸（但最小 921600 像素）。
+- **返回的容器不固定**：同一个模型一次返回 PNG、一次返回 JPEG，所以扩展名和实际字节不一致时脚本
+  会打印一行提示。
+
 ### Step 3: 创建带配图的文章
 
 保存为 `{文章名}-image.md`，包含：
