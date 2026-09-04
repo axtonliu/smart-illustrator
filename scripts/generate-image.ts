@@ -33,10 +33,26 @@ interface ReferenceImage {
 // API endpoints
 const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+// Atlas serves the same model families through an async submit-then-poll API.
+// Verified: its image models are not reachable from /v1/chat/completions, so
+// this is a separate call path rather than an OpenRouter base-URL swap.
+const ATLAS_API_BASE = 'https://api.atlascloud.ai/api/v1/model';
 
 // Default models
 const DEFAULT_OPENROUTER_MODEL = 'google/gemini-3-pro-image-preview';
 const DEFAULT_GEMINI_MODEL = 'gemini-3-pro-image-preview';
+const DEFAULT_ATLAS_MODEL = 'google/nano-banana-pro/text-to-image';
+
+// Atlas polling + edge details
+const ATLAS_POLL_INTERVAL_MS = 5000;
+const ATLAS_TIMEOUT_MS = 600_000;
+// api.atlascloud.ai answers some clients' default User-Agent with 403 (error
+// code 1010), so every request sends an explicit one.
+const ATLAS_USER_AGENT = 'smart-illustrator/1';
+const ATLAS_EDIT_SUFFIX = '/edit';
+// Measured: seedream models honour an explicit `size` and reject anything under
+// 921600 pixels; nano-banana models ignore `size` and honour `aspect_ratio`.
+const ATLAS_SEEDREAM_SIZES: Record<string, string> = { default: '1280*720', '2k': '2048*1152' };
 
 // Supported aspect ratios for Gemini 3 Pro Image
 type AspectRatio = '1:1' | '2:3' | '3:2' | '3:4' | '4:3' | '4:5' | '5:4' | '9:16' | '16:9' | '21:9';
@@ -343,6 +359,94 @@ async function generateImageGemini(
   return null;
 }
 
+async function generateImageAtlas(
+  prompt: string,
+  model: string,
+  apiKey: string,
+  size: 'default' | '2k' = 'default',
+  references: ReferenceImage[] = [],
+  aspectRatio?: AspectRatio
+): Promise<{ imageData: Buffer; mimeType: string } | null> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+    'User-Agent': ATLAS_USER_AGENT
+  };
+
+  // The Atlas model id also selects the task, so a run with reference images
+  // switches to the model's edit task.
+  let effectiveModel = model;
+  if (references.length > 0 && !effectiveModel.endsWith(ATLAS_EDIT_SUFFIX)) {
+    effectiveModel = effectiveModel.slice(0, effectiveModel.lastIndexOf('/')) + ATLAS_EDIT_SUFFIX;
+  }
+
+  const payload: Record<string, unknown> = { model: effectiveModel, prompt };
+  if (effectiveModel.includes('nano-banana')) {
+    if (aspectRatio) payload.aspect_ratio = aspectRatio;
+    if (size === '2k') {
+      console.log('Note: 2K is not exposed on this Atlas model; its default resolution is returned.');
+    }
+  } else {
+    payload.size = ATLAS_SEEDREAM_SIZES[size] ?? ATLAS_SEEDREAM_SIZES.default;
+  }
+  if (references.length > 0) {
+    // Atlas takes every input image in one newline-separated field.
+    payload.images = references
+      .map((ref) => `data:${ref.mimeType};base64,${ref.base64}`)
+      .join('\n');
+  }
+
+  const submitted = await fetch(`${ATLAS_API_BASE}/generateImage`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  });
+  if (!submitted.ok) {
+    throw new Error(`Atlas submit failed (${submitted.status}): ${await submitted.text()}`);
+  }
+  const submitJson = (await submitted.json()) as { data?: { id?: string } };
+  const predictionId = submitJson.data?.id;
+  if (!predictionId) {
+    throw new Error('Atlas returned no prediction id');
+  }
+
+  const deadline = Date.now() + ATLAS_TIMEOUT_MS;
+  for (;;) {
+    if (Date.now() > deadline) {
+      throw new Error(`Atlas prediction ${predictionId} timed out`);
+    }
+    await new Promise((done) => setTimeout(done, ATLAS_POLL_INTERVAL_MS));
+    const polled = await fetch(`${ATLAS_API_BASE}/prediction/${encodeURIComponent(predictionId)}`, {
+      headers
+    });
+    if (!polled.ok) {
+      throw new Error(`Atlas poll failed (${polled.status}): ${await polled.text()}`);
+    }
+    const data = ((await polled.json()) as {
+      data?: { status?: string; outputs?: string[]; error?: string };
+    }).data;
+    if (data?.status === 'completed') {
+      const url = data.outputs?.[0];
+      if (!url) throw new Error('Atlas completed without an image URL');
+      // The result URL is short-lived, so download it right away.
+      const downloaded = await fetch(url, { headers: { 'User-Agent': ATLAS_USER_AGENT } });
+      if (!downloaded.ok) {
+        throw new Error(`Atlas image download failed (${downloaded.status})`);
+      }
+      const imageData = Buffer.from(await downloaded.arrayBuffer());
+      // The container is not fixed per model, so read it from the response and
+      // fall back to the byte signature.
+      const mimeType =
+        downloaded.headers.get('content-type') ??
+        (imageData.subarray(0, 3).toString('hex') === 'ffd8ff' ? 'image/jpeg' : 'image/png');
+      return { imageData, mimeType };
+    }
+    if (data?.status === 'failed') {
+      throw new Error(`Atlas generation failed: ${data.error ?? 'unknown'}`);
+    }
+  }
+}
+
 function printUsage(): never {
   console.log(`
 Image Generation Script (OpenRouter / Gemini API)
@@ -356,7 +460,7 @@ Options:
   -f, --prompt-file <path>  Read prompt from file
   -o, --output <path>       Output image path (default: generated.png)
   -m, --model <model>       Model to use
-  --provider <provider>     API provider: openrouter (default) or gemini
+  --provider <provider>     API provider: openrouter (default), gemini or atlas
   --size <size>             Image size: 2k (2048px, default) or default (~1.4K)
   -a, --aspect-ratio <ratio>  Aspect ratio: 1:1, 3:4, 4:3, 9:16, 16:9, 21:9, etc.
   -h, --help                Show this help
@@ -383,6 +487,7 @@ Cover Learning (learn from high-performing covers):
 Environment Variables (in order of priority):
   OPENROUTER_API_KEY        OpenRouter API key (preferred, has spending limits)
   GEMINI_API_KEY            Direct Gemini API key (fallback)
+  ATLASCLOUD_API_KEY        Atlas Cloud API key (serves the same model families)
 
 Models:
   OpenRouter: google/gemini-3-pro-image-preview (default)
@@ -416,7 +521,7 @@ async function main() {
   let promptFile: string | null = null;
   let output = 'generated.png';
   let model: string | null = null;
-  let provider: 'openrouter' | 'gemini' | null = null;
+  let provider: 'openrouter' | 'gemini' | 'atlas' | null = null;
   let size: 'default' | '2k' = '2k';  // Default to 2K resolution
   let aspectRatio: AspectRatio | undefined;
   const refPaths: string[] = [];
@@ -454,7 +559,7 @@ async function main() {
         model = args[++i];
         break;
       case '--provider':
-        provider = args[++i] as 'openrouter' | 'gemini';
+        provider = args[++i] as 'openrouter' | 'gemini' | 'atlas';
         break;
       case '--size':
         size = args[++i] as 'default' | '2k';
@@ -559,42 +664,66 @@ async function main() {
   // Determine provider and API key
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
+  const atlasKey = process.env.ATLASCLOUD_API_KEY;
+
+  const providerKeys: Record<'openrouter' | 'gemini' | 'atlas', string | undefined> = {
+    openrouter: openrouterKey,
+    gemini: geminiKey,
+    atlas: atlasKey
+  };
+  const providerKeyNames: Record<'openrouter' | 'gemini' | 'atlas', string> = {
+    openrouter: 'OPENROUTER_API_KEY',
+    gemini: 'GEMINI_API_KEY',
+    atlas: 'ATLASCLOUD_API_KEY'
+  };
 
   // Auto-detect provider if not specified
-  // Prefer OpenRouter (has spending limits) over direct Gemini
+  // Prefer OpenRouter (has spending limits) over direct Gemini, then Atlas
   if (!provider) {
     if (openrouterKey) {
       provider = 'openrouter';
     } else if (geminiKey) {
       provider = 'gemini';
+    } else if (atlasKey) {
+      provider = 'atlas';
     } else {
       console.error('Error: No API key found');
-      console.error('Set OPENROUTER_API_KEY or GEMINI_API_KEY environment variable');
+      console.error('Set OPENROUTER_API_KEY, GEMINI_API_KEY or ATLASCLOUD_API_KEY environment variable');
       process.exit(1);
     }
   }
 
-  // Reference images require Gemini API (OpenRouter doesn't support multimodal input)
+  // Reference images need a provider that accepts image input: Gemini takes
+  // them inline, and Atlas takes them in its `images` field (which also
+  // switches the request to the model's edit task). OpenRouter does not.
   if (refPaths.length > 0 && provider === 'openrouter') {
     if (geminiKey) {
       console.log('Note: Reference images require Gemini API. Switching from OpenRouter to Gemini...');
       provider = 'gemini';
+    } else if (atlasKey) {
+      console.log('Note: Reference images are not supported on OpenRouter. Switching to Atlas...');
+      provider = 'atlas';
     } else {
-      console.error('Error: Reference images require GEMINI_API_KEY (OpenRouter does not support multimodal input)');
+      console.error('Error: Reference images require GEMINI_API_KEY or ATLASCLOUD_API_KEY (OpenRouter does not support multimodal input)');
       process.exit(1);
     }
   }
 
   // Validate API key for chosen provider
-  let apiKey = provider === 'openrouter' ? openrouterKey : geminiKey;
+  let apiKey = providerKeys[provider];
   if (!apiKey) {
-    console.error(`Error: ${provider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'GEMINI_API_KEY'} is required for ${provider} provider`);
+    console.error(`Error: ${providerKeyNames[provider]} is required for ${provider} provider`);
     process.exit(1);
   }
 
   // Set default model based on provider
   if (!model) {
-    model = provider === 'openrouter' ? DEFAULT_OPENROUTER_MODEL : DEFAULT_GEMINI_MODEL;
+    model =
+      provider === 'openrouter'
+        ? DEFAULT_OPENROUTER_MODEL
+        : provider === 'atlas'
+          ? DEFAULT_ATLAS_MODEL
+          : DEFAULT_GEMINI_MODEL;
   }
 
   if (promptFile) {
@@ -663,6 +792,8 @@ async function main() {
 
       if (provider === 'openrouter') {
         result = await generateImageOpenRouter(finalPrompt, model, apiKey, size, aspectRatio);
+      } else if (provider === 'atlas') {
+        result = await generateImageAtlas(finalPrompt, model, apiKey, size, references, aspectRatio);
       } else {
         result = await generateImageGemini(finalPrompt, model, apiKey, size, references, aspectRatio);
       }
@@ -674,6 +805,15 @@ async function main() {
 
       await writeFile(candidateOutput, result.imageData);
       generatedFiles.push(candidateOutput);
+
+      // Providers do not always return the container the extension implies —
+      // the same Atlas model returned PNG on one call and JPEG on the next —
+      // so say so instead of leaving a mislabelled file unexplained.
+      const declared = extname(candidateOutput).slice(1).toLowerCase();
+      const actual = result.mimeType?.split('/')[1]?.split(';')[0]?.toLowerCase();
+      if (actual && declared && actual !== declared && !(actual === 'jpeg' && declared === 'jpg')) {
+        console.log(`Note: provider returned ${actual.toUpperCase()} bytes for a .${declared} target`);
+      }
 
       console.log(`✓ Saved: ${candidateOutput} (${(result.imageData.length / 1024).toFixed(1)} KB)`);
     }
